@@ -89,6 +89,7 @@ export default function CalendarIndex({ boothLocations, bookings, templates }: P
         start_date: new Date().toISOString().split('T')[0],
         end_date: new Date().toISOString().split('T')[0],
         status: 'active',
+        rent_fee: '',
         notes: '',
     });
 
@@ -257,6 +258,15 @@ export default function CalendarIndex({ boothLocations, bookings, templates }: P
                                                 placeholder="e.g. Mandaluyong City"
                                                 value={boothForm.data.city}
                                                 onChange={(e) => boothForm.setData('city', e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="city">Rent Fee:</Label>
+                                            <Input
+                                                id="rent_fee"
+                                                placeholder="e.g. 3500.00"
+                                                value={boothForm.data.rent_fee}
+                                                onChange={(e) => boothForm.setData('rent_fee', e.target.value)}
                                             />
                                         </div>
                                     </div>

@@ -16,6 +16,7 @@ class BoothLocation extends Model
         'city',
         'start_date',
         'end_date',
+        'rent_fee',
         'status',
         'notes',
     ];

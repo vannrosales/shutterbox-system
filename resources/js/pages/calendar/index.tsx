@@ -38,6 +38,7 @@ interface BoothLocation {
     start_date: string;
     end_date: string;
     status: string;
+    rent_fee: number;
     notes: string | null;
 }
 
@@ -261,7 +262,7 @@ export default function CalendarIndex({ boothLocations, bookings, templates }: P
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="city">Rent Fee:</Label>
+                                            <Label htmlFor="rent_fee">Rent Fee:</Label>
                                             <Input
                                                 id="rent_fee"
                                                 placeholder="e.g. 3500.00"

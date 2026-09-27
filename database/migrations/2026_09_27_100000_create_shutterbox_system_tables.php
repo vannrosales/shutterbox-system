@@ -28,6 +28,7 @@ return new class extends Migration
             $table->string('city')->nullable();
             $table->dateTime('start_date');
             $table->dateTime('end_date');
+            $table->decimal('rent_fee')->default(0.00);
             $table->string('status')->default('active'); // active, upcoming, completed
             $table->text('notes')->nullable();
             $table->timestamps();

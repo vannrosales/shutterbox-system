@@ -19,20 +19,27 @@ class FinancialController extends Controller
     {
         $selectedDateStr = $request->query('date', Carbon::today()->format('Y-m-d'));
         $selectedDate = Carbon::parse($selectedDateStr);
+        $selectedBoothId = $request->query('booth_location_id', 'all');
 
         // Daily Gross Sales calculation
-        $queueSessionsToday = QueueSession::whereDate('created_at', $selectedDate)
-            ->where('payment_status', 'paid')
-            ->get();
+        $queueTodayQuery = QueueSession::whereDate('created_at', $selectedDate)
+            ->where('payment_status', 'paid');
+
+        $bookingsTodayQuery = Booking::whereDate('event_date', $selectedDate)
+            ->where('status', '!=', 'cancelled');
+
+        if ($selectedBoothId !== 'all' && ! empty($selectedBoothId)) {
+            $queueTodayQuery->where('booth_location_id', $selectedBoothId);
+            $bookingsTodayQuery->where('booth_location_id', $selectedBoothId);
+        }
+
+        $queueSessionsToday = $queueTodayQuery->get();
+        $bookingsToday = $bookingsTodayQuery->get();
 
         $queueGrossSalesToday = $queueSessionsToday->sum('total_price');
         $queueSessionsCountToday = $queueSessionsToday->sum('sessions_count');
         $queuePhotostripsCountToday = $queueSessionsToday->sum('total_photostrips');
         $queueExtraCopiesToday = $queueSessionsToday->sum('extra_copies');
-
-        $bookingsToday = Booking::whereDate('event_date', $selectedDate)
-            ->where('status', '!=', 'cancelled')
-            ->get();
         $bookingsGrossSalesToday = $bookingsToday->sum('total_amount');
 
         $totalDailyGrossSales = $queueGrossSalesToday + $bookingsGrossSalesToday;
@@ -49,32 +56,39 @@ class FinancialController extends Controller
         $startOfMonth = $selectedDate->copy()->startOfMonth();
         $endOfMonth = $selectedDate->copy()->endOfMonth();
 
-        $monthQueueSales = QueueSession::whereBetween('created_at', [$startOfMonth, $endOfMonth])
-            ->where('payment_status', 'paid')
-            ->sum('total_price');
+        $monthQueueQuery = QueueSession::whereBetween('created_at', [$startOfMonth, $endOfMonth])
+            ->where('payment_status', 'paid');
 
-        $monthBookingSales = Booking::whereBetween('event_date', [$startOfMonth, $endOfMonth])
-            ->where('status', '!=', 'cancelled')
-            ->sum('total_amount');
+        $monthBookingQuery = Booking::whereBetween('event_date', [$startOfMonth, $endOfMonth])
+            ->where('status', '!=', 'cancelled');
 
+        $monthExpensesQuery = Expense::whereBetween('expense_date', [$startOfMonth, $endOfMonth]);
+
+        $expensesListQuery = Expense::with('boothLocation')
+            ->orderBy('expense_date', 'desc')
+            ->orderBy('id', 'desc');
+
+        if ($selectedBoothId !== 'all' && ! empty($selectedBoothId)) {
+            $monthQueueQuery->where('booth_location_id', $selectedBoothId);
+            $monthBookingQuery->where('booth_location_id', $selectedBoothId);
+            $monthExpensesQuery->where('booth_location_id', $selectedBoothId);
+            $expensesListQuery->where('booth_location_id', $selectedBoothId);
+        }
+
+        $monthQueueSales = $monthQueueQuery->sum('total_price');
+        $monthBookingSales = $monthBookingQuery->sum('total_amount');
         $totalMonthGrossSales = $monthQueueSales + $monthBookingSales;
 
-        $monthExpenses = Expense::whereBetween('expense_date', [$startOfMonth, $endOfMonth])
-            ->get();
+        $monthExpenses = $monthExpensesQuery->get();
         $totalMonthExpenses = $monthExpenses->sum('amount');
-
         $netMonthIncome = $totalMonthGrossSales - $totalMonthExpenses;
 
-        // All expenses for list
-        $expensesList = Expense::with('boothLocation')
-            ->orderBy('expense_date', 'desc')
-            ->orderBy('id', 'desc')
-            ->get();
-
-        $boothLocations = BoothLocation::where('status', 'active')->get();
+        $expensesList = $expensesListQuery->get();
+        $boothLocations = BoothLocation::orderBy('name')->get();
 
         return Inertia::render('financials/index', [
             'selectedDate' => $selectedDateStr,
+            'selectedBoothId' => (string) $selectedBoothId,
             'dailyStats' => [
                 'gross_sales' => $totalDailyGrossSales,
                 'queue_sales' => $queueGrossSalesToday,

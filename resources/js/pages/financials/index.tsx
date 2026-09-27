@@ -15,6 +15,7 @@ import {
     Download, 
     FileText, 
     Filter, 
+    MapPin, 
     Plus, 
     Printer, 
     Receipt, 
@@ -51,6 +52,7 @@ interface QueueSession {
 
 interface Props {
     selectedDate: string;
+    selectedBoothId?: string;
     dailyStats: {
         gross_sales: number;
         queue_sales: number;
@@ -83,6 +85,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function FinancialsIndex({
     selectedDate,
+    selectedBoothId = 'all',
     dailyStats,
     monthlyStats,
     expenses,
@@ -91,6 +94,7 @@ export default function FinancialsIndex({
 }: Props) {
     const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
     const [dateInput, setDateInput] = useState(selectedDate);
+    const [boothInput, setBoothInput] = useState(selectedBoothId);
 
     const expenseForm = useForm({
         booth_location_id: boothLocations.length > 0 ? String(boothLocations[0].id) : '',
@@ -105,9 +109,10 @@ export default function FinancialsIndex({
         return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(val);
     };
 
-    const handleDateFilterChange = (newDate: string) => {
+    const handleFilterChange = (newDate: string, newBoothId: string) => {
         setDateInput(newDate);
-        router.get('/financials', { date: newDate }, { preserveState: true });
+        setBoothInput(newBoothId);
+        router.get('/financials', { date: newDate, booth_location_id: newBoothId }, { preserveState: true });
     };
 
     const handleExpenseSubmit = (e: React.FormEvent) => {
@@ -143,16 +148,40 @@ export default function FinancialsIndex({
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-3 z-10">
-                        <div className="flex items-center gap-2 bg-neutral-950 border border-neutral-800 rounded-lg p-1.5 shadow-sm">
-                            <Label htmlFor="filter-date" className="text-xs font-semibold px-1 text-neutral-300">Date:</Label>
-                            <Input
-                                id="filter-date"
-                                type="date"
-                                value={dateInput}
-                                onChange={(e) => handleDateFilterChange(e.target.value)}
-                                className="h-8 text-xs font-mono w-36 bg-neutral-900 border-neutral-700"
-                            />
+                    <div className="flex flex-wrap items-center gap-3 z-10">
+                        {/* Event Location Filter & Date Filter */}
+                        <div className="flex flex-wrap items-center gap-2 bg-neutral-950 border border-neutral-800 rounded-xl p-1.5 shadow-sm">
+                            <div className="flex items-center gap-1.5 px-1">
+                                <MapPin className="size-3.5 text-[#E50914]" />
+                                <Label htmlFor="filter-event" className="text-xs font-semibold text-neutral-300">Event:</Label>
+                                <Select
+                                    value={boothInput}
+                                    onValueChange={(val) => handleFilterChange(dateInput, val)}
+                                >
+                                    <SelectTrigger id="filter-event" className="h-8 text-xs font-medium w-48 bg-neutral-900 border-neutral-700">
+                                        <SelectValue placeholder="All Events & Booths" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Events & Booths</SelectItem>
+                                        {boothLocations.map((loc) => (
+                                            <SelectItem key={loc.id} value={String(loc.id)}>
+                                                {loc.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 border-l border-neutral-800 pl-2">
+                                <Label htmlFor="filter-date" className="text-xs font-semibold px-1 text-neutral-300">Date:</Label>
+                                <Input
+                                    id="filter-date"
+                                    type="date"
+                                    value={dateInput}
+                                    onChange={(e) => handleFilterChange(e.target.value, boothInput)}
+                                    className="h-8 text-xs font-mono w-36 bg-neutral-900 border-neutral-700"
+                                />
+                            </div>
                         </div>
 
                         <Dialog open={isExpenseModalOpen} onOpenChange={setIsExpenseModalOpen}>

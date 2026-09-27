@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\BoothLocation;
 use App\Models\Template;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -65,5 +66,27 @@ class ShutterboxTest extends TestCase
         $this->get(route('calendar.index'))->assertOk();
         $this->get(route('financials.index'))->assertOk();
         $this->get(route('templates.index'))->assertOk();
+    }
+
+    public function test_financial_tracker_can_be_filtered_by_event_booth_location()
+    {
+        $user = User::factory()->create();
+        $booth = BoothLocation::create([
+            'name' => 'SM Megamall Booth',
+            'address' => 'EDSA',
+            'city' => 'Mandaluyong',
+            'start_date' => now(),
+            'end_date' => now()->addDays(2),
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($user);
+
+        $response = $this->get(route('financials.index', ['booth_location_id' => $booth->id]));
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('financials/index')
+            ->where('selectedBoothId', (string) $booth->id)
+        );
     }
 }

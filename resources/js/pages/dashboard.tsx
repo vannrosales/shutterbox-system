@@ -368,6 +368,21 @@ export default function Dashboard({ metrics, activeBooth, topTemplate, recentSes
                                         </div>
                                     </Link>
                                 </Button>
+
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                        localStorage.removeItem('shutterbox_setup_completed');
+                                        window.location.reload();
+                                    }}
+                                    className="justify-start h-auto py-3 px-4 border-neutral-800 bg-neutral-900/80 hover:bg-neutral-800 cursor-pointer"
+                                >
+                                    <Sparkles className="mr-3 size-4 text-[#E50914]" />
+                                    <div className="text-left">
+                                        <div className="font-semibold text-xs text-white">Event Revenue Import Wizard</div>
+                                        <div className="text-[11px] text-neutral-400">Initialize or import existing event revenue</div>
+                                    </div>
+                                </Button>
                             </CardContent>
                         </Card>
                     </div>

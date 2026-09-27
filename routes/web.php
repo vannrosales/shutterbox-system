@@ -12,7 +12,7 @@ Route::get('/', function () {
         return redirect()->route('dashboard');
     }
 
-    return Inertia\Inertia::render('welcome');
+    return redirect()->route('login');
 })->name('home');
 
 Route::middleware(['auth'])->group(function () {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreQueueSessionRequest;
+use App\Http\Requests\UpdateQueueSessionRequest;
 use App\Models\BoothLocation;
 use App\Models\QueueSession;
 use App\Models\Template;
@@ -86,6 +87,44 @@ class QueueController extends Controller
         $queueSession->templates()->sync($validated['template_ids']);
 
         return back()->with('success', "Queue entry {$queueNumber} created successfully!");
+    }
+
+    public function update(UpdateQueueSessionRequest $request, QueueSession $queueSession): RedirectResponse
+    {
+        $validated = $request->validated();
+
+        $sessionsCount = (int) $validated['sessions_count'];
+        $extraCopies = (int) ($validated['extra_copies'] ?? 0);
+
+        $photostripsBaseCount = $sessionsCount * 2;
+        $extraPhotostripsCount = $extraCopies * 2;
+        $totalPhotostrips = $photostripsBaseCount + $extraPhotostripsCount;
+
+        $basePricePerSession = 100.00;
+        $baseTotal = $sessionsCount * $basePricePerSession;
+        $extraCopiesPrice = $extraCopies * 100.00;
+        $totalPrice = $baseTotal + $extraCopiesPrice;
+
+        $queueSession->update([
+            'customer_name' => $validated['customer_name'] ?: 'Walk-in Guest',
+            'booth_location_id' => $validated['booth_location_id'] ?? null,
+            'sessions_count' => $sessionsCount,
+            'photostrips_base_count' => $photostripsBaseCount,
+            'extra_copies' => $extraCopies,
+            'total_photostrips' => $totalPhotostrips,
+            'base_price_per_session' => $basePricePerSession,
+            'base_total' => $baseTotal,
+            'extra_copies_price' => $extraCopiesPrice,
+            'total_price' => $totalPrice,
+            'payment_method' => $validated['payment_method'],
+            'payment_status' => $validated['payment_status'],
+            'status' => $validated['status'] ?? $queueSession->status,
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        $queueSession->templates()->sync($validated['template_ids']);
+
+        return back()->with('success', "Queue ticket {$queueSession->queue_number} updated successfully!");
     }
 
     public function updateStatus(Request $request, QueueSession $queueSession): RedirectResponse

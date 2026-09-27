@@ -110,4 +110,54 @@ class ShutterboxTest extends TestCase
 
         $response->assertSessionHasErrors('template_ids');
     }
+
+    public function test_can_update_queue_session()
+    {
+        $user = User::factory()->create();
+        $t1 = Template::create(['name' => '3 Shots - Black', 'code' => 'T1', 'category' => 'Black', 'is_active' => true]);
+        $t2 = Template::create(['name' => '4 Shots - Black', 'code' => 'T2', 'category' => 'Black', 'is_active' => true]);
+
+        $session = \App\Models\QueueSession::create([
+            'queue_number' => 'SB-001',
+            'customer_name' => 'Alice',
+            'sessions_count' => 1,
+            'photostrips_base_count' => 2,
+            'extra_copies' => 0,
+            'total_photostrips' => 2,
+            'base_price_per_session' => 100.00,
+            'base_total' => 100.00,
+            'extra_copies_price' => 0.00,
+            'total_price' => 100.00,
+            'payment_method' => 'cash',
+            'payment_status' => 'paid',
+            'status' => 'waiting',
+        ]);
+        $session->templates()->sync([$t1->id]);
+
+        $this->actingAs($user);
+
+        // Update to 2 sessions with 2 templates and 1 extra copy set
+        $response = $this->put(route('queuing.update', $session), [
+            'customer_name' => 'Alice Updated',
+            'sessions_count' => 2,
+            'template_ids' => [$t1->id, $t2->id],
+            'extra_copies' => 1,
+            'payment_method' => 'gcash',
+            'payment_status' => 'paid',
+            'status' => 'in_booth',
+        ]);
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('queue_sessions', [
+            'id' => $session->id,
+            'customer_name' => 'Alice Updated',
+            'sessions_count' => 2,
+            'extra_copies' => 1,
+            'total_photostrips' => 6, // 4 base + 2 extra
+            'total_price' => 300.00, // 200 base + 100 extra
+            'payment_method' => 'gcash',
+            'status' => 'in_booth',
+        ]);
+    }
 }

@@ -21,6 +21,7 @@ Route::middleware(['auth'])->group(function () {
     // Queuing POS
     Route::get('/queuing', [QueueController::class, 'index'])->name('queuing.index');
     Route::post('/queuing', [QueueController::class, 'store'])->name('queuing.store');
+    Route::put('/queuing/{queueSession}', [QueueController::class, 'update'])->name('queuing.update');
     Route::patch('/queuing/{queueSession}/status', [QueueController::class, 'updateStatus'])->name('queuing.update-status');
     Route::delete('/queuing/{queueSession}', [QueueController::class, 'destroy'])->name('queuing.destroy');
 

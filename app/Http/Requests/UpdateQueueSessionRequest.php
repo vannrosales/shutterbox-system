@@ -11,6 +11,9 @@ class UpdateQueueSessionRequest extends FormRequest
         return true;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function rules(): array
     {
         $maxTemplates = max(1, (int) $this->input('sessions_count', 1));

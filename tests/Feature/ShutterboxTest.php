@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\BoothLocation;
+use App\Models\QueueSession;
 use App\Models\Template;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -117,7 +118,7 @@ class ShutterboxTest extends TestCase
         $t1 = Template::create(['name' => '3 Shots - Black', 'code' => 'T1', 'category' => 'Black', 'is_active' => true]);
         $t2 = Template::create(['name' => '4 Shots - Black', 'code' => 'T2', 'category' => 'Black', 'is_active' => true]);
 
-        $session = \App\Models\QueueSession::create([
+        $session = QueueSession::create([
             'queue_number' => 'SB-001',
             'customer_name' => 'Alice',
             'sessions_count' => 1,

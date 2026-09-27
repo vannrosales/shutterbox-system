@@ -66,7 +66,7 @@ class CalendarController extends Controller
         $validated = $request->validated();
 
         $todayCount = Booking::whereYear('created_at', Carbon::now()->year)->count();
-        $bookingNumber = 'BK-'.Carbon::now()->year.'-'.str_pad($todayCount + 1, 4, '0', STR_PAD_LEFT);
+        $bookingNumber = 'BK-'.Carbon::now()->year.'-'.str_pad((string) ($todayCount + 1), 4, '0', STR_PAD_LEFT);
 
         $sessionsCount = (int) $validated['sessions_count'];
         $extraCopies = (int) ($validated['extra_copies'] ?? 0);

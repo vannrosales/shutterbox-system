@@ -17,9 +17,10 @@ class FinancialController extends Controller
 {
     public function index(Request $request): Response
     {
-        $selectedDateStr = $request->query('date', Carbon::today()->format('Y-m-d'));
+        $selectedDateStr = is_string($request->query('date')) ? $request->query('date') : Carbon::today()->format('Y-m-d');
         $selectedDate = Carbon::parse($selectedDateStr);
-        $selectedBoothId = $request->query('booth_location_id', 'all');
+        $rawBoothId = $request->query('booth_location_id', 'all');
+        $selectedBoothId = is_string($rawBoothId) ? $rawBoothId : (is_numeric($rawBoothId) ? (string) $rawBoothId : 'all');
 
         // Daily Gross Sales calculation
         $queueTodayQuery = QueueSession::whereDate('created_at', $selectedDate)
@@ -88,7 +89,7 @@ class FinancialController extends Controller
 
         return Inertia::render('financials/index', [
             'selectedDate' => $selectedDateStr,
-            'selectedBoothId' => (string) $selectedBoothId,
+            'selectedBoothId' => $selectedBoothId,
             'dailyStats' => [
                 'gross_sales' => $totalDailyGrossSales,
                 'queue_sales' => $queueGrossSalesToday,

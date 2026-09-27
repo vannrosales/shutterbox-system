@@ -13,6 +13,8 @@ class StoreBookingRequest extends FormRequest
 
     public function rules(): array
     {
+        $maxTemplates = max(1, (int) $this->input('sessions_count', 1));
+
         return [
             'client_name' => ['required', 'string', 'max:255'],
             'client_phone' => ['required', 'string', 'max:50'],
@@ -25,7 +27,7 @@ class StoreBookingRequest extends FormRequest
             'sessions_count' => ['required', 'integer', 'min:1'],
             'extra_copies' => ['nullable', 'integer', 'min:0'],
             'deposit_amount' => ['nullable', 'numeric', 'min:0'],
-            'template_ids' => ['nullable', 'array'],
+            'template_ids' => ['nullable', 'array', "max:{$maxTemplates}"],
             'template_ids.*' => ['exists:templates,id'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];

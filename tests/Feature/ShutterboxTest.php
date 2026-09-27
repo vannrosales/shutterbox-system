@@ -89,4 +89,25 @@ class ShutterboxTest extends TestCase
             ->where('selectedBoothId', (string) $booth->id)
         );
     }
+
+    public function test_template_selection_count_is_validated_against_sessions_count()
+    {
+        $user = User::factory()->create();
+        $t1 = Template::create(['name' => '3 Shots - Black', 'code' => 'T1', 'category' => 'Black', 'is_active' => true]);
+        $t2 = Template::create(['name' => '4 Shots - Black', 'code' => 'T2', 'category' => 'Black', 'is_active' => true]);
+
+        $this->actingAs($user);
+
+        // 1 session with 2 templates selected should fail validation
+        $response = $this->post(route('queuing.store'), [
+            'customer_name' => 'Jane Doe',
+            'sessions_count' => 1,
+            'template_ids' => [$t1->id, $t2->id],
+            'extra_copies' => 0,
+            'payment_method' => 'cash',
+            'payment_status' => 'paid',
+        ]);
+
+        $response->assertSessionHasErrors('template_ids');
+    }
 }

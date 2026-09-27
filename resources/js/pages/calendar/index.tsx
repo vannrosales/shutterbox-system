@@ -136,11 +136,27 @@ export default function CalendarIndex({ boothLocations, bookings, templates }: P
 
     const handleTemplateToggle = (tplId: number) => {
         const current = bookingForm.data.template_ids;
+        const maxAllowed = bookingForm.data.sessions_count;
         if (current.includes(tplId)) {
             bookingForm.setData('template_ids', current.filter((id) => id !== tplId));
         } else {
-            bookingForm.setData('template_ids', [...current, tplId]);
+            if (maxAllowed === 1) {
+                bookingForm.setData('template_ids', [tplId]);
+            } else if (current.length < maxAllowed) {
+                bookingForm.setData('template_ids', [...current, tplId]);
+            } else {
+                bookingForm.setData('template_ids', [...current.slice(1), tplId]);
+            }
         }
+    };
+
+    const handleBookingSessionsChange = (val: string) => {
+        const newCount = parseInt(val, 10);
+        bookingForm.setData((prevData) => ({
+            ...prevData,
+            sessions_count: newCount,
+            template_ids: prevData.template_ids.slice(0, newCount),
+        }));
     };
 
     const handleDeleteBooth = (id: number) => {
@@ -379,10 +395,10 @@ export default function CalendarIndex({ boothLocations, bookings, templates }: P
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label htmlFor="b_sessions">Sessions Package</Label>
+                                             <Label htmlFor="b_sessions">Sessions Package</Label>
                                             <Select
                                                 value={String(bookingForm.data.sessions_count)}
-                                                onValueChange={(val) => bookingForm.setData('sessions_count', parseInt(val, 10))}
+                                                onValueChange={handleBookingSessionsChange}
                                             >
                                                 <SelectTrigger id="b_sessions">
                                                     <SelectValue />
@@ -418,7 +434,12 @@ export default function CalendarIndex({ boothLocations, bookings, templates }: P
 
                                     {/* Templates */}
                                     <div className="space-y-2">
-                                        <Label className="text-xs font-semibold">Select Preferred Photostrip Templates</Label>
+                                        <div className="flex items-center justify-between">
+                                            <Label className="text-xs font-semibold">Select Preferred Photostrip Templates</Label>
+                                            <span className="text-[11px] font-medium text-[#E50914]">
+                                                Select up to {bookingForm.data.sessions_count} template{bookingForm.data.sessions_count > 1 ? 's' : ''} ({bookingForm.data.template_ids.length}/{bookingForm.data.sessions_count})
+                                            </span>
+                                        </div>
                                         <div className="grid grid-cols-2 gap-2 border rounded-lg p-3">
                                             {templates.map((tpl) => (
                                                 <div key={tpl.id} className="flex items-center space-x-2 text-xs">

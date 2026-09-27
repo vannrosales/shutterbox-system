@@ -112,11 +112,27 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
     const totalPrice = basePrice + extraCopiesPrice;
 
     const handleTemplateToggle = (templateId: number) => {
+        const maxAllowed = data.sessions_count;
         if (data.template_ids.includes(templateId)) {
             setData('template_ids', data.template_ids.filter((id) => id !== templateId));
         } else {
-            setData('template_ids', [...data.template_ids, templateId]);
+            if (maxAllowed === 1) {
+                setData('template_ids', [templateId]);
+            } else if (data.template_ids.length < maxAllowed) {
+                setData('template_ids', [...data.template_ids, templateId]);
+            } else {
+                setData('template_ids', [...data.template_ids.slice(1), templateId]);
+            }
         }
+    };
+
+    const handleSessionsCountChange = (val: string) => {
+        const newCount = parseInt(val, 10);
+        setData((prevData) => ({
+            ...prevData,
+            sessions_count: newCount,
+            template_ids: prevData.template_ids.slice(0, newCount),
+        }));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -223,7 +239,7 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                                     </div>
                                     <Select
                                         value={String(data.sessions_count)}
-                                        onValueChange={(val) => setData('sessions_count', parseInt(val, 10))}
+                                        onValueChange={handleSessionsCountChange}
                                     >
                                         <SelectTrigger id="sessions_count" className="h-9 text-xs bg-neutral-900 border-neutral-800">
                                             <SelectValue />
@@ -247,8 +263,8 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                                         <Label className="text-xs font-medium text-neutral-300">
                                             Select Templates
                                         </Label>
-                                        <span className="text-[11px] text-neutral-400">
-                                            {data.sessions_count >= 2 ? 'Select 1 or more templates' : 'Select template'}
+                                        <span className="text-[11px] font-medium text-[#E50914]">
+                                            Select up to {data.sessions_count} template{data.sessions_count > 1 ? 's' : ''} ({data.template_ids.length}/{data.sessions_count})
                                         </span>
                                     </div>
 

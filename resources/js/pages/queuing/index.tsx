@@ -167,42 +167,43 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                                 <Plus className="mr-2 size-4" /> New Queue Session
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+                        <DialogContent className="max-w-lg border border-neutral-800 bg-neutral-950 text-white p-6 rounded-2xl shadow-2xl">
                             <DialogHeader>
-                                <DialogTitle className="flex items-center gap-2 text-xl">
+                                <DialogTitle className="flex items-center gap-2 text-lg font-bold tracking-tight">
                                     <Sparkles className="size-5 text-[#E50914]" /> Create Queue Ticket
                                 </DialogTitle>
-                                <DialogDescription>
-                                    Default: 1 session = 2 photostrips (₱100). Additional copy = 2 photostrips (₱100 per copy).
+                                <DialogDescription className="text-xs text-neutral-400">
+                                    Select session package, photostrip layout templates, and payment details.
                                 </DialogDescription>
                             </DialogHeader>
 
-                            <form onSubmit={handleSubmit} className="space-y-5 py-2">
+                            <form onSubmit={handleSubmit} className="space-y-4 py-2">
                                 {/* Customer Name & Location */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="customer_name">Customer / Group Name</Label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="customer_name" className="text-xs font-medium text-neutral-300">Customer Name</Label>
                                         <Input
                                             id="customer_name"
-                                            placeholder="e.g. Walk-in Guest / Maria"
+                                            placeholder="Guest / Group name"
                                             value={data.customer_name}
                                             onChange={(e) => setData('customer_name', e.target.value)}
+                                            className="h-9 text-xs bg-neutral-900 border-neutral-800 focus:border-[#E50914]"
                                         />
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="booth_location">Booth Location</Label>
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="booth_location" className="text-xs font-medium text-neutral-300">Booth Location</Label>
                                         <Select
                                             value={String(data.booth_location_id)}
                                             onValueChange={(val) => setData('booth_location_id', val)}
                                         >
-                                            <SelectTrigger id="booth_location">
-                                                <SelectValue placeholder="Select Booth Location" />
+                                            <SelectTrigger id="booth_location" className="h-9 text-xs bg-neutral-900 border-neutral-800">
+                                                <SelectValue placeholder="Select Location" />
                                             </SelectTrigger>
-                                            <SelectContent>
+                                            <SelectContent className="bg-neutral-900 border-neutral-800">
                                                 {boothLocations.map((loc) => (
                                                     <SelectItem key={loc.id} value={String(loc.id)}>
-                                                        {loc.name} ({loc.city})
+                                                        {loc.name}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -211,79 +212,75 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                                 </div>
 
                                 {/* Sessions Dropdown */}
-                                <div className="space-y-2">
+                                <div className="space-y-1.5">
                                     <div className="flex justify-between items-center">
-                                        <Label htmlFor="sessions_count" className="font-semibold text-sm">
-                                            Dropdown : Sessions
+                                        <Label htmlFor="sessions_count" className="text-xs font-medium text-neutral-300">
+                                            Sessions
                                         </Label>
-                                        <span className="text-xs font-mono text-[#E50914]">
-                                            1 Session = 2 Photostrips (₱100)
+                                        <span className="text-[11px] text-neutral-400 font-mono">
+                                            ₱100 / session (2 strips)
                                         </span>
                                     </div>
                                     <Select
                                         value={String(data.sessions_count)}
                                         onValueChange={(val) => setData('sessions_count', parseInt(val, 10))}
                                     >
-                                        <SelectTrigger id="sessions_count" className="w-full">
+                                        <SelectTrigger id="sessions_count" className="h-9 text-xs bg-neutral-900 border-neutral-800">
                                             <SelectValue />
                                         </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="1">1 Session (2 photostrips - ₱100)</SelectItem>
-                                            <SelectItem value="2">2 Sessions (4 photostrips - ₱200)</SelectItem>
-                                            <SelectItem value="3">3 Sessions (6 photostrips - ₱300)</SelectItem>
-                                            <SelectItem value="4">4 Sessions (8 photostrips - ₱400)</SelectItem>
-                                            <SelectItem value="5">5 Sessions (10 photostrips - ₱500)</SelectItem>
-                                            <SelectItem value="6">6 Sessions (12 photostrips - ₱600)</SelectItem>
-                                            <SelectItem value="8">8 Sessions (16 photostrips - ₱800)</SelectItem>
-                                            <SelectItem value="10">10 Sessions (20 photostrips - ₱1,000)</SelectItem>
+                                        <SelectContent className="bg-neutral-900 border-neutral-800">
+                                            <SelectItem value="1">1 Session (2 strips - ₱100)</SelectItem>
+                                            <SelectItem value="2">2 Sessions (4 strips - ₱200)</SelectItem>
+                                            <SelectItem value="3">3 Sessions (6 strips - ₱300)</SelectItem>
+                                            <SelectItem value="4">4 Sessions (8 strips - ₱400)</SelectItem>
+                                            <SelectItem value="5">5 Sessions (10 strips - ₱500)</SelectItem>
+                                            <SelectItem value="6">6 Sessions (12 strips - ₱600)</SelectItem>
+                                            <SelectItem value="8">8 Sessions (16 strips - ₱800)</SelectItem>
+                                            <SelectItem value="10">10 Sessions (20 strips - ₱1,000)</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    {data.sessions_count >= 2 && (
-                                        <p className="text-xs text-[#E50914] font-medium">
-                                            ✓ {data.sessions_count} sessions selected: You can select 1 or more templates below!
-                                        </p>
-                                    )}
                                 </div>
 
-                                {/* Checkbox : Templates */}
-                                <div className="space-y-3 rounded-xl border p-4 bg-accent/30">
+                                {/* Templates Selection */}
+                                <div className="space-y-2">
                                     <div className="flex items-center justify-between">
-                                        <Label className="font-semibold text-sm">
-                                            Checkbox : Templates
+                                        <Label className="text-xs font-medium text-neutral-300">
+                                            Select Templates
                                         </Label>
-                                        <span className="text-xs text-muted-foreground">
-                                            {data.sessions_count >= 2 ? 'Select 1 or more templates' : 'Select template for session'}
+                                        <span className="text-[11px] text-neutral-400">
+                                            {data.sessions_count >= 2 ? 'Select 1 or more templates' : 'Select template'}
                                         </span>
                                     </div>
 
                                     {templates.length === 0 ? (
-                                        <p className="text-xs text-muted-foreground">No active templates found.</p>
+                                        <p className="text-xs text-neutral-400">No active templates found.</p>
                                     ) : (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-2 gap-2">
                                             {templates.map((tpl) => {
                                                 const isChecked = data.template_ids.includes(tpl.id);
                                                 return (
                                                     <div
                                                         key={tpl.id}
                                                         onClick={() => handleTemplateToggle(tpl.id)}
-                                                        className={`flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                                                            isChecked ? 'border-[#E50914] bg-[#E50914]/10 shadow-sm' : 'border-border hover:bg-accent'
+                                                        className={`flex items-center space-x-2.5 p-2.5 rounded-lg border cursor-pointer transition-all ${
+                                                            isChecked ? 'border-[#E50914] bg-[#E50914]/10' : 'border-neutral-800 bg-neutral-900/60 hover:border-neutral-700'
                                                         }`}
                                                     >
                                                         <Checkbox
                                                             id={`template-${tpl.id}`}
                                                             checked={isChecked}
                                                             onCheckedChange={() => handleTemplateToggle(tpl.id)}
+                                                            className="border-neutral-600 data-[state=checked]:bg-[#E50914] data-[state=checked]:border-[#E50914]"
                                                         />
-                                                        <div className="grid gap-1 leading-none">
+                                                        <div className="grid leading-tight truncate">
                                                             <label
                                                                 htmlFor={`template-${tpl.id}`}
-                                                                className="text-xs font-semibold cursor-pointer"
+                                                                className="text-xs font-semibold cursor-pointer truncate"
                                                             >
                                                                 {tpl.name}
                                                             </label>
-                                                            <span className="text-[10px] text-muted-foreground">
-                                                                {tpl.category} • {tpl.code}
+                                                            <span className="text-[10px] text-neutral-400 truncate">
+                                                                {tpl.category}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -292,71 +289,71 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                                         </div>
                                     )}
                                     {errors.template_ids && (
-                                        <p className="text-xs text-destructive font-medium">{errors.template_ids}</p>
+                                        <p className="text-xs text-red-500">{errors.template_ids}</p>
                                     )}
                                 </div>
 
-                                {/* Dropdown : Copies (optional) */}
-                                <div className="space-y-2">
+                                {/* Extra Copies */}
+                                <div className="space-y-1.5">
                                     <div className="flex justify-between items-center">
-                                        <Label htmlFor="extra_copies" className="font-semibold text-sm">
-                                            Dropdown : Copies (optional)
+                                        <Label htmlFor="extra_copies" className="text-xs font-medium text-neutral-300">
+                                            Extra Copies <span className="text-neutral-500 font-normal">(Optional)</span>
                                         </Label>
-                                        <span className="text-xs text-[#E50914] font-medium">
-                                            +₱100 per extra copy (2 photostrips)
+                                        <span className="text-[11px] text-neutral-400 font-mono">
+                                            +₱100 per copy set (2 strips)
                                         </span>
                                     </div>
                                     <Select
                                         value={String(data.extra_copies)}
                                         onValueChange={(val) => setData('extra_copies', parseInt(val, 10))}
                                     >
-                                        <SelectTrigger id="extra_copies">
+                                        <SelectTrigger id="extra_copies" className="h-9 text-xs bg-neutral-900 border-neutral-800">
                                             <SelectValue />
                                         </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="0">0 Extra Copies (Base photostrips only)</SelectItem>
-                                            <SelectItem value="1">+1 Extra Copy (2 photostrips - +₱100)</SelectItem>
-                                            <SelectItem value="2">+2 Extra Copies (4 photostrips - +₱200)</SelectItem>
-                                            <SelectItem value="3">+3 Extra Copies (6 photostrips - +₱300)</SelectItem>
-                                            <SelectItem value="4">+4 Extra Copies (8 photostrips - +₱400)</SelectItem>
-                                            <SelectItem value="5">+5 Extra Copies (10 photostrips - +₱500)</SelectItem>
-                                            <SelectItem value="6">+6 Extra Copies (12 photostrips - +₱600)</SelectItem>
-                                            <SelectItem value="8">+8 Extra Copies (16 photostrips - +₱800)</SelectItem>
-                                            <SelectItem value="10">+10 Extra Copies (20 photostrips - +₱1,000)</SelectItem>
+                                        <SelectContent className="bg-neutral-900 border-neutral-800">
+                                            <SelectItem value="0">0 Extra Copies</SelectItem>
+                                            <SelectItem value="1">+1 Copy Set (+2 strips - +₱100)</SelectItem>
+                                            <SelectItem value="2">+2 Copy Sets (+4 strips - +₱200)</SelectItem>
+                                            <SelectItem value="3">+3 Copy Sets (+6 strips - +₱300)</SelectItem>
+                                            <SelectItem value="4">+4 Copy Sets (+8 strips - +₱400)</SelectItem>
+                                            <SelectItem value="5">+5 Copy Sets (+10 strips - +₱500)</SelectItem>
+                                            <SelectItem value="6">+6 Copy Sets (+12 strips - +₱600)</SelectItem>
+                                            <SelectItem value="8">+8 Copy Sets (+16 strips - +₱800)</SelectItem>
+                                            <SelectItem value="10">+10 Copy Sets (+20 strips - +₱1,000)</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
 
-                                {/* Payment Method */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="payment_method">Payment Method</Label>
+                                {/* Payment Method & Status */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="payment_method" className="text-xs font-medium text-neutral-300">Payment Method</Label>
                                         <Select
                                             value={data.payment_method}
                                             onValueChange={(val) => setData('payment_method', val)}
                                         >
-                                            <SelectTrigger id="payment_method">
+                                            <SelectTrigger id="payment_method" className="h-9 text-xs bg-neutral-900 border-neutral-800">
                                                 <SelectValue />
                                             </SelectTrigger>
-                                            <SelectContent>
+                                            <SelectContent className="bg-neutral-900 border-neutral-800">
                                                 <SelectItem value="cash">Cash</SelectItem>
                                                 <SelectItem value="gcash">GCash</SelectItem>
                                                 <SelectItem value="maya">Maya</SelectItem>
-                                                <SelectItem value="card">Card / Terminal</SelectItem>
+                                                <SelectItem value="card">Card / POS</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="payment_status">Payment Status</Label>
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="payment_status" className="text-xs font-medium text-neutral-300">Payment Status</Label>
                                         <Select
                                             value={data.payment_status}
                                             onValueChange={(val) => setData('payment_status', val)}
                                         >
-                                            <SelectTrigger id="payment_status">
+                                            <SelectTrigger id="payment_status" className="h-9 text-xs bg-neutral-900 border-neutral-800">
                                                 <SelectValue />
                                             </SelectTrigger>
-                                            <SelectContent>
+                                            <SelectContent className="bg-neutral-900 border-neutral-800">
                                                 <SelectItem value="paid">Paid</SelectItem>
                                                 <SelectItem value="pending">Pending</SelectItem>
                                             </SelectContent>
@@ -364,48 +361,43 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                                     </div>
                                 </div>
 
-                                {/* Order Calculation Summary Box */}
-                                <div className="rounded-xl bg-neutral-900 border border-neutral-800 text-white p-4 space-y-2">
-                                    <div className="text-xs uppercase tracking-wider text-neutral-400 font-semibold">
-                                        Pricing & Photostrip Summary
-                                    </div>
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-neutral-300">Base Sessions ({data.sessions_count} × ₱100):</span>
-                                        <span className="font-mono">{formatCurrency(basePrice)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-neutral-300">Base Photostrips (1 session = 2 strips):</span>
-                                        <span className="font-mono">{basePhotostrips} strips</span>
+                                {/* Minimalist Order Summary Box */}
+                                <div className="rounded-xl bg-neutral-900/80 border border-neutral-800 p-3.5 space-y-1.5 text-xs">
+                                    <div className="flex justify-between text-neutral-400">
+                                        <span>Sessions ({data.sessions_count}):</span>
+                                        <span className="font-mono text-neutral-200">{formatCurrency(basePrice)}</span>
                                     </div>
                                     {data.extra_copies > 0 && (
-                                        <div className="flex justify-between text-sm text-[#E50914]">
-                                            <span>Extra Copies ({data.extra_copies} × ₱100):</span>
-                                            <span className="font-mono">+{formatCurrency(extraCopiesPrice)} ({extraPhotostrips} strips)</span>
+                                        <div className="flex justify-between text-neutral-400">
+                                            <span>Extra Copies ({data.extra_copies}):</span>
+                                            <span className="font-mono text-neutral-200">+{formatCurrency(extraCopiesPrice)}</span>
                                         </div>
                                     )}
-                                    <div className="pt-2 border-t border-neutral-800 flex justify-between items-baseline">
-                                        <div>
-                                            <span className="text-sm font-semibold">Total Price:</span>
-                                            <span className="text-xs text-neutral-400 block">{totalPhotostrips} total photostrips to print</span>
-                                        </div>
-                                        <span className="text-2xl font-bold text-[#E50914] font-mono">{formatCurrency(totalPrice)}</span>
+                                    <div className="flex justify-between text-neutral-400">
+                                        <span>Total Photostrips:</span>
+                                        <span className="font-mono text-neutral-200">{totalPhotostrips} strips</span>
+                                    </div>
+                                    <div className="pt-2 border-t border-neutral-800 flex justify-between items-center">
+                                        <span className="font-semibold text-neutral-200">Total Price</span>
+                                        <span className="text-xl font-extrabold text-[#E50914] font-mono">{formatCurrency(totalPrice)}</span>
                                     </div>
                                 </div>
 
-                                <DialogFooter>
+                                <DialogFooter className="pt-2 gap-2">
                                     <Button
                                         type="button"
                                         variant="outline"
                                         onClick={() => setIsCreateOpen(false)}
+                                        className="h-9 text-xs border-neutral-800 text-neutral-400 hover:bg-neutral-800"
                                     >
                                         Cancel
                                     </Button>
                                     <Button
                                         type="submit"
                                         disabled={processing || data.template_ids.length === 0}
-                                        className="bg-[#E50914] text-white font-semibold hover:bg-[#c10712]"
+                                        className="h-9 text-xs bg-[#E50914] text-white font-semibold hover:bg-[#c10712] px-5"
                                     >
-                                        Generate Queue Ticket
+                                        Generate Ticket
                                     </Button>
                                 </DialogFooter>
                             </form>

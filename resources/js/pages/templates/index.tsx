@@ -97,10 +97,10 @@ export default function TemplatesIndex({ templates, bestTemplate, totalSelection
                                 <Plus className="mr-2 size-4" /> Add New Template
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-md">
+                        <DialogContent className="max-w-md border border-neutral-800 bg-neutral-950 text-white p-6 rounded-2xl shadow-2xl">
                             <DialogHeader>
-                                <DialogTitle>Add Photostrip Design Template</DialogTitle>
-                                <DialogDescription>
+                                <DialogTitle className="text-lg font-bold tracking-tight">Add Photostrip Design Template</DialogTitle>
+                                <DialogDescription className="text-xs text-neutral-400">
                                     Register a new photo strip layout template for customer selection.
                                 </DialogDescription>
                             </DialogHeader>

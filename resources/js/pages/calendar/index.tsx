@@ -204,11 +204,11 @@ export default function CalendarIndex({ boothLocations, bookings, templates }: P
                                     <MapPin className="mr-2 size-4 text-[#E50914]" /> Add Event Location
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-lg">
+                            <DialogContent className="max-w-lg border border-neutral-800 bg-neutral-950 text-white p-6 rounded-2xl shadow-2xl">
                                 <DialogHeader>
-                                    <DialogTitle>Add Booth Event Location</DialogTitle>
-                                    <DialogDescription>
-                                        Register a venue or mall event location where the ShutterBox booth is deployed.
+                                    <DialogTitle className="text-lg font-bold tracking-tight">Add Booth Event Location</DialogTitle>
+                                    <DialogDescription className="text-xs text-neutral-400">
+                                        Register a venue or event location where the ShutterBox booth is deployed.
                                     </DialogDescription>
                                 </DialogHeader>
 
@@ -301,10 +301,10 @@ export default function CalendarIndex({ boothLocations, bookings, templates }: P
                                     <Plus className="mr-2 size-4" /> Add Booking
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+                            <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto border border-neutral-800 bg-neutral-950 text-white p-6 rounded-2xl shadow-2xl">
                                 <DialogHeader>
-                                    <DialogTitle>Create Client Event Booking</DialogTitle>
-                                    <DialogDescription>
+                                    <DialogTitle className="text-lg font-bold tracking-tight">Create Client Event Booking</DialogTitle>
+                                    <DialogDescription className="text-xs text-neutral-400">
                                         Schedule a private photo booth reservation (Debut, Wedding, Corporate Summit).
                                     </DialogDescription>
                                 </DialogHeader>

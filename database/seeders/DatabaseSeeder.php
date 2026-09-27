@@ -2,23 +2,19 @@
 
 namespace Database\Seeders;
 
-use App\Models\Booking;
 use App\Models\BoothLocation;
-use App\Models\Expense;
-use App\Models\QueueSession;
 use App\Models\Template;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        if (! User::where('email', 'test@example.com')->exists()) {
+        if (! User::where('email', 'admin@shutterbox.com')->exists()) {
             User::factory()->create([
                 'name' => 'Shutterbox Admin',
-                'email' => 'test@example.com',
+                'email' => 'admin@shutterbox.com',
             ]);
         }
 
@@ -65,6 +61,6 @@ class DatabaseSeeder extends Seeder
             'status' => 'active',
             'notes' => 'RTR Foundation Days Photo Booth Event station.',
         ]);
-        
+
     }
 }

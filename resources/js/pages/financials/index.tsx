@@ -190,10 +190,10 @@ export default function FinancialsIndex({
                                     <Plus className="mr-2 size-4" /> Record Expense
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-md">
+                            <DialogContent className="max-w-md border border-neutral-800 bg-neutral-950 text-white p-6 rounded-2xl shadow-2xl">
                                 <DialogHeader>
-                                    <DialogTitle>Record Operational Expense</DialogTitle>
-                                    <DialogDescription>
+                                    <DialogTitle className="text-lg font-bold tracking-tight">Record Operational Expense</DialogTitle>
+                                    <DialogDescription className="text-xs text-neutral-400">
                                         Add booth expenses (paper rolls, ink, rent, staff allowance).
                                     </DialogDescription>
                                 </DialogHeader>

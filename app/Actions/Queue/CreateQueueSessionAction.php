@@ -6,14 +6,29 @@ namespace App\Actions\Queue;
 
 use App\DTOs\QueueSessionData;
 use App\Models\QueueSession;
-use Carbon\Carbon;
 
 final class CreateQueueSessionAction
 {
     public function handle(QueueSessionData $data): QueueSession
     {
-        $todayCount = QueueSession::whereDate('created_at', Carbon::today())->count();
-        $queueNumber = 'SB-'.str_pad((string) ($todayCount + 1), 3, '0', STR_PAD_LEFT);
+        $activeNumbers = QueueSession::whereIn('status', ['waiting', 'in_booth'])
+            ->pluck('queue_number')
+            ->map(function (string $num): int {
+                if (preg_match('/(\d+)/', $num, $matches)) {
+                    return (int) $matches[1];
+                }
+
+                return 0;
+            })
+            ->filter(fn (int $n): bool => $n > 0)
+            ->toArray();
+
+        $nextNum = 1;
+        while (in_array($nextNum, $activeNumbers, true)) {
+            $nextNum++;
+        }
+
+        $queueNumber = 'SB-'.str_pad((string) $nextNum, 3, '0', STR_PAD_LEFT);
 
         $queueSession = QueueSession::create([
             'queue_number' => $queueNumber,

@@ -68,7 +68,7 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editingSession, setEditingSession] = useState<QueueSession | null>(null);
     const [receiptSession, setReceiptSession] = useState<QueueSession | null>(null);
-    const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [statusFilter, setStatusFilter] = useState<string>('active');
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
@@ -85,6 +85,7 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
     };
 
     const filteredSessions = sessions.filter((s) => {
+        if (statusFilter === 'active') return s.status === 'waiting' || s.status === 'in_booth';
         if (statusFilter === 'all') return true;
         return s.status === statusFilter;
     });
@@ -140,7 +141,7 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                         <Filter className="size-4 text-muted-foreground" />
                         <span className="text-sm font-medium">Filter Queue:</span>
                         <div className="flex gap-1">
-                            {['all', 'waiting', 'in_booth', 'completed', 'cancelled'].map((st) => (
+                            {['active', 'waiting', 'in_booth', 'completed', 'all'].map((st) => (
                                 <Button
                                     key={st}
                                     variant={statusFilter === st ? 'default' : 'ghost'}

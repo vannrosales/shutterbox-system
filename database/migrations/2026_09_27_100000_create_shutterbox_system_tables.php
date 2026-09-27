@@ -57,7 +57,7 @@ return new class extends Migration
 
         Schema::create('queue_sessions', function (Blueprint $table) {
             $table->id();
-            $table->string('queue_number')->unique();
+            $table->string('queue_number');
             $table->string('customer_name')->default('Walk-in Guest');
             $table->foreignId('booth_location_id')->nullable()->constrained('booth_locations')->nullOnDelete();
             $table->integer('sessions_count')->default(1);

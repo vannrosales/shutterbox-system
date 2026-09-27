@@ -161,4 +161,47 @@ class ShutterboxTest extends TestCase
             'status' => 'in_booth',
         ]);
     }
+
+    public function test_recycles_queue_number_to_001_when_active_queue_is_cleared()
+    {
+        $user = User::factory()->create();
+        $t1 = Template::create(['name' => '3 Shots - Black', 'code' => 'T1', 'category' => 'Black', 'is_active' => true]);
+
+        // Create completed session SB-001
+        $completedSession = QueueSession::create([
+            'queue_number' => 'SB-001',
+            'customer_name' => 'First Customer',
+            'sessions_count' => 1,
+            'photostrips_base_count' => 2,
+            'extra_copies' => 0,
+            'total_photostrips' => 2,
+            'base_price_per_session' => 100.00,
+            'base_total' => 100.00,
+            'extra_copies_price' => 0.00,
+            'total_price' => 100.00,
+            'payment_method' => 'cash',
+            'payment_status' => 'paid',
+            'status' => 'completed',
+        ]);
+
+        $this->actingAs($user);
+
+        // When a new customer arrives, since active queue is empty, next number should recycle back to SB-001
+        $response = $this->post(route('queuing.store'), [
+            'customer_name' => 'Next Customer',
+            'sessions_count' => 1,
+            'template_ids' => [$t1->id],
+            'extra_copies' => 0,
+            'payment_method' => 'cash',
+            'payment_status' => 'paid',
+        ]);
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('queue_sessions', [
+            'customer_name' => 'Next Customer',
+            'queue_number' => 'SB-001',
+            'status' => 'waiting',
+        ]);
+    }
 }

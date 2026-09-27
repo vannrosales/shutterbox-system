@@ -14,33 +14,48 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import type { NavItem } from '@/types';
+import type { NavGroup, NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
+const mainNavGroups: NavGroup[] = [
     {
-        title: 'Dashboard',
-        href: '/dashboard',
-        icon: LayoutGrid,
+        title: 'Overview',
+        items: [
+            {
+                title: 'Dashboard',
+                href: '/dashboard',
+                icon: LayoutGrid,
+            },
+        ],
     },
     {
-        title: 'Queuing POS',
-        href: '/queuing',
-        icon: Ticket,
+        title: 'Operations',
+        items: [
+            {
+                title: 'Queuing POS',
+                href: '/queuing',
+                icon: Ticket,
+            },
+            {
+                title: 'Calendar & Bookings',
+                href: '/calendar',
+                icon: Calendar,
+            },
+        ],
     },
     {
-        title: 'Calendar & Bookings',
-        href: '/calendar',
-        icon: Calendar,
-    },
-    {
-        title: 'Financial Tracker',
-        href: '/financials',
-        icon: DollarSign,
-    },
-    {
-        title: 'Template Reports',
-        href: '/templates',
-        icon: LayoutTemplate,
+        title: 'Finance & Analytics',
+        items: [
+            {
+                title: 'Financial Tracker',
+                href: '/financials',
+                icon: DollarSign,
+            },
+            {
+                title: 'Template Reports',
+                href: '/templates',
+                icon: LayoutTemplate,
+            },
+        ],
     },
 ];
 
@@ -62,7 +77,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain groups={mainNavGroups} />
             </SidebarContent>
 
             <SidebarFooter>

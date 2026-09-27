@@ -57,7 +57,7 @@ jobs:
         run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
       - name: Install NPM Dependencies
-        run: npm ci
+        run: npm install
 
       - name: Prepare Laravel Production Environment
         run: |

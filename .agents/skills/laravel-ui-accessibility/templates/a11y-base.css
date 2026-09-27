@@ -1,0 +1,180 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Accessibility base layer. Include before your design system.
+   Every rule here exists to satisfy a specific WCAG 2.2 AA criterion.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+    --focus-color: #1d4ed8;          /* must reach 3:1 against adjacent colours */
+    --focus-width: 3px;
+    --sticky-header-height: 0px;     /* set to the real height when using a sticky header */
+    --touch-target: 2.75rem;         /* 44px */
+}
+
+/* ── SC 2.4.7 / 2.4.11 Focus Visible & Focus Appearance ───────────────────── */
+
+:focus-visible {
+    outline: var(--focus-width) solid var(--focus-color);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+/* Only suppress the default ring where :focus-visible is supported AND you are
+   providing a stronger indicator. Never remove focus styling outright. */
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* SC 2.4.11 Focus Not Obscured — anchors and focused elements must clear a sticky header */
+[id] {
+    scroll-margin-top: calc(var(--sticky-header-height) + 1rem);
+}
+
+/* ── SC 2.4.1 Bypass Blocks — skip link ───────────────────────────────────── */
+
+.skip-link {
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: 0;
+    z-index: 999;
+    padding: 0.75rem 1.25rem;
+    background: #ffffff;
+    color: #111827;
+    font-weight: 600;
+    text-decoration: underline;
+    transform: translateY(-200%);
+    transition: transform 150ms ease-in-out;
+}
+
+.skip-link:focus {
+    transform: translateY(0);
+    outline: var(--focus-width) solid var(--focus-color);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skip-link { transition: none; }
+}
+
+/* main must be focusable for the skip link to actually move focus */
+main:focus {
+    outline: none;
+}
+
+/* ── Visually hidden, still announced ─────────────────────────────────────── */
+
+.sr-only {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Visible again when focused — for skip links and "reveal on focus" controls */
+.sr-only-focusable:focus,
+.sr-only-focusable:focus-within {
+    position: static;
+    inline-size: auto;
+    block-size: auto;
+    margin: 0;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+}
+
+/* ── SC 2.5.8 Target Size (Minimum) ───────────────────────────────────────── */
+
+button,
+[role="button"],
+input[type="submit"],
+input[type="button"],
+.icon-button {
+    min-inline-size: var(--touch-target);
+    min-block-size: var(--touch-target);
+}
+
+/* Inline links in prose are exempt; give standalone links a real target */
+a:not(.prose a) {
+    display: inline-block;
+    min-block-size: 1.5rem;
+}
+
+/* ── SC 1.4.12 Text Spacing — never clip text ─────────────────────────────── */
+
+p, li, dd, dt, td, th, label, legend, figcaption {
+    /* use min-block-size, never a fixed block-size, on text containers */
+    overflow-wrap: break-word;
+}
+
+/* ── SC 2.3.3 / 2.2.2 Motion ──────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* ── SC 1.4.4 Resize Text — never disable zoom ────────────────────────────── */
+/* Enforce in HTML too:
+   <meta name="viewport" content="width=device-width, initial-scale=1">
+   NEVER add user-scalable=no or maximum-scale=1                              */
+
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+/* ── SC 1.4.11 Non-text Contrast — form controls need visible borders ─────── */
+
+input,
+select,
+textarea {
+    border: 1px solid #6b7280;   /* 4.8:1 on white — a #e5e7eb border fails at 1.2:1 */
+    min-block-size: var(--touch-target);
+}
+
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+    border-color: #b91c1c;
+    border-width: 2px;           /* thickness, not just colour — SC 1.4.1 */
+}
+
+/* ── Alpine: x-cloak must actually hide, or hidden content stays in the a11y tree ── */
+
+[x-cloak] {
+    display: none !important;
+}
+
+/* ── Forced-colors / Windows High Contrast ────────────────────────────────── */
+
+@media (forced-colors: active) {
+    :focus-visible {
+        outline: 3px solid CanvasText;
+    }
+    .badge,
+    .btn {
+        border: 1px solid CanvasText;   /* background-only styling disappears */
+    }
+    svg {
+        forced-color-adjust: auto;
+    }
+}
+
+/* ── Print — government forms get printed ─────────────────────────────────── */
+
+@media print {
+    nav, .no-print, .toasts, .skip-link { display: none !important; }
+    [hidden], [aria-expanded="false"] + [hidden] { display: block !important; }
+    a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.85em; }
+    body { color: #000; background: #fff; }
+}

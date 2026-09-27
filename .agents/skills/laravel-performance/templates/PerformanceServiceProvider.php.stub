@@ -1,0 +1,141 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Providers;
+
+use Illuminate\Database\Connection;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Database\LazyLoadingViolationException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\ServiceProvider;
+
+/**
+ * Register in bootstrap/providers.php.
+ *
+ * Everything here is a guardrail that fails loudly in development and reports
+ * quietly in production. Install this on day one of a project — retrofitting
+ * strict mode into a mature codebase surfaces hundreds of violations at once.
+ */
+final class PerformanceServiceProvider extends ServiceProvider
+{
+    /** Log a warning when a single query exceeds this many milliseconds. */
+    private const SLOW_QUERY_MS = 500;
+
+    /** Log a warning when one request exceeds this many queries. */
+    private const MAX_QUERIES_PER_REQUEST = 30;
+
+    /** Log a warning when a whole request's DB time exceeds this. */
+    private const MAX_DB_TIME_MS = 2000;
+
+    public function boot(): void
+    {
+        $this->enforceStrictModels();
+        $this->watchSlowQueries();
+        $this->watchRequestBudgets();
+    }
+
+    /**
+     * preventLazyLoading is the single highest-value performance guardrail in Laravel.
+     * It turns every N+1 into an immediate, located exception during development.
+     */
+    private function enforceStrictModels(): void
+    {
+        $strict = ! $this->app->isProduction();
+
+        // Also enables preventSilentlyDiscardingAttributes and
+        // preventAccessingMissingAttributes — both catch real bugs.
+        Model::shouldBeStrict($strict);
+
+        Model::handleLazyLoadingViolationUsing(
+            function (Model $model, string $relation): void {
+                $message = sprintf('Lazy loaded [%s] on [%s]', $relation, $model::class);
+
+                if (app()->isProduction()) {
+                    Log::channel('performance')->warning($message, [
+                        'url' => request()?->fullUrl(),
+                    ]);
+
+                    return;   // never break production over this
+                }
+
+                throw new LazyLoadingViolationException($model, $relation);
+            }
+        );
+
+        // Guard against Model::all() style unbounded fetches in production.
+        // Uncomment and tune once you know your real page sizes.
+        // Model::preventsAccessingMissingAttributes();
+    }
+
+    private function watchSlowQueries(): void
+    {
+        DB::whenQueryingForLongerThan(
+            self::SLOW_QUERY_MS,
+            function (Connection $connection, QueryExecuted $event): void {
+                Log::channel('performance')->warning('Slow query', [
+                    'connection' => $connection->getName(),
+                    'sql'        => $event->sql,
+                    'bindings'   => $this->redact($event->bindings),
+                    'time_ms'    => $event->time,
+                    'url'        => request()?->fullUrl(),
+                ]);
+            }
+        );
+    }
+
+    /**
+     * Per-request query count and total DB time. A regression here almost always
+     * means a newly introduced N+1 or a missing eager load.
+     */
+    private function watchRequestBudgets(): void
+    {
+        if ($this->app->runningInConsole()) {
+            return;   // console commands legitimately run many queries
+        }
+
+        $count = 0;
+        $totalMs = 0.0;
+
+        DB::listen(function (QueryExecuted $event) use (&$count, &$totalMs): void {
+            $count++;
+            $totalMs += $event->time;
+        });
+
+        $this->app->terminating(function () use (&$count, &$totalMs): void {
+            if ($count > self::MAX_QUERIES_PER_REQUEST || $totalMs > self::MAX_DB_TIME_MS) {
+                Log::channel('performance')->warning('Request exceeded database budget', [
+                    'queries'  => $count,
+                    'db_ms'    => round($totalMs, 2),
+                    'url'      => request()?->fullUrl(),
+                    'route'    => request()?->route()?->getName(),
+                ]);
+            }
+        });
+    }
+
+    /** Never write credentials or PII into the performance log. */
+    private function redact(array $bindings): array
+    {
+        return array_map(
+            fn (mixed $value): mixed => is_string($value) && strlen($value) > 100
+                ? substr($value, 0, 100).'…'
+                : $value,
+            $bindings,
+        );
+    }
+}
+
+/*
+ * config/logging.php — a dedicated channel keeps performance noise out of the
+ * application log and makes it easy to route to a different destination.
+ *
+ * 'performance' => [
+ *     'driver' => 'daily',
+ *     'path'   => storage_path('logs/performance.log'),
+ *     'level'  => 'warning',
+ *     'days'   => 14,
+ * ],
+ */

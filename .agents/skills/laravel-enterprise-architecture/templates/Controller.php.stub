@@ -1,0 +1,45 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers;
+
+use App\Actions\{{ Domain }}\{{ Action }};
+use App\DataTransferObjects\{{ Name }}Data;
+use App\Http\Requests\{{ Name }}Request;
+use App\Http\Resources\{{ Model }}Resource;
+use App\Models\{{ Model }};
+use Illuminate\Http\RedirectResponse;
+
+/**
+ * Thin by contract:
+ *   - validation  → Form Request
+ *   - authz       → Policy (via the Form Request's authorize())
+ *   - logic       → Action
+ *   - output      → Resource / view / redirect
+ * Target: under 15 lines per method. No `if` on domain state. No queries. No DB::transaction.
+ */
+final class {{ Name }}Controller
+{
+    public function __invoke(
+        {{ Name }}Request $request,
+        {{ Model }} ${{ model }},
+        {{ Action }} $action,
+    ): RedirectResponse {
+        $action->handle(${{ model }}, {{ Name }}Data::fromRequest($request));
+
+        return to_route('{{ route }}.show', ${{ model }})
+            ->with('status', __('{{ Success message }}'));
+    }
+}
+
+// ─── API variant ─────────────────────────────────────────────────────────────
+//
+// public function __invoke(...): {{ Model }}Resource
+// {
+//     return {{ Model }}Resource::make(
+//         $action->handle(${{ model }}, {{ Name }}Data::fromRequest($request))
+//     );
+// }
+//
+// Response envelope, status codes, and error shape: see `laravel-api-standards`.

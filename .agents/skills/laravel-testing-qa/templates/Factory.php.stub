@@ -1,0 +1,185 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Database\Factories;
+
+use App\Enums\{{ Enum }};
+use App\Models\{{ Model }};
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Database\Eloquent\Factories\Sequence;
+
+/**
+ * @extends Factory<{{ Model }}>
+ */
+final class {{ Model }}Factory extends Factory
+{
+    protected $model = {{ Model }}::class;
+
+    /**
+     * A valid, minimal, BORING record. Every test starts from this.
+     *
+     * Two rules:
+     *   1. Default to the INITIAL state (Draft, not a random status). A random
+     *      status makes tests fail unpredictably.
+     *   2. NEVER randomise anything a test might assert on.
+     */
+    public function definition(): array
+    {
+        return [
+            // A NEW tenant by default — this is deliberate. It means
+            // {{ Model }}::factory()->create() produces a record belonging to
+            // SOMEONE ELSE, which is exactly what a cross-tenant test needs.
+            'tenant_id'   => Tenant::factory(),
+            'customer_id' => Customer::factory(),
+            'created_by'  => User::factory(),
+
+            // unique() on anything with a unique constraint
+            'reference' => 'INV-'.fake()->unique()->numerify('######'),
+
+            // Initial state, not random
+            'status' => {{ Enum }}::Draft,
+
+            // Bounded away from validation boundaries (min:1 would reject 0)
+            'total_minor' => fake()->numberBetween(10_000, 1_000_000),
+            'currency'    => 'PHP',
+
+            'issued_at' => null,
+            'due_on'    => null,
+        ];
+    }
+
+    /*
+    |----------------------------------------------------------------------
+    | States — name DOMAIN CONCEPTS, not attribute values
+    |----------------------------------------------------------------------
+    |
+    | ✓ {{ Model }}::factory()->overdue()->create()
+    | ✗ {{ Model }}::factory()->create(['status' => 'issued', 'due_on' => now()->subWeek()])
+    |
+    | When "overdue" gains a third condition you change one method here, not
+    | forty tests. This is the highest-value factory practice there is.
+    */
+
+    public function draft(): static
+    {
+        return $this->state([
+            'status'    => {{ Enum }}::Draft,
+            'issued_at' => null,
+        ]);
+    }
+
+    public function issued(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'status'    => {{ Enum }}::Issued,
+            'issued_at' => now()->subDays(7),
+            'due_on'    => now()->addDays(23),
+        ]);
+    }
+
+    public function paid(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'status'    => {{ Enum }}::Paid,
+            'issued_at' => now()->subDays(14),
+            'paid_at'   => now()->subDays(2),
+        ]);
+    }
+
+    public function overdue(): static
+    {
+        return $this->state([
+            'status'    => {{ Enum }}::Issued,
+            'issued_at' => now()->subMonths(2),
+            'due_on'    => now()->subWeek(),
+        ]);
+    }
+
+    /** Explicitly place the record in a known tenant. */
+    public function forTenant(Tenant $tenant): static
+    {
+        return $this->state(['tenant_id' => $tenant->id]);
+    }
+
+    /*
+    |----------------------------------------------------------------------
+    | Callbacks
+    |----------------------------------------------------------------------
+    |
+    | Keep these cheap — they run for EVERY record created, everywhere.
+    */
+
+    public function configure(): static
+    {
+        return $this->afterCreating(function ({{ Model }} $model): void {
+            // Derived values that depend on children
+            if ($model->relationLoaded('lines') && $model->lines->isNotEmpty()) {
+                $model->updateQuietly([
+                    'total_minor' => $model->lines->sum(
+                        fn ($line): int => $line->quantity * $line->unit_price_minor
+                    ),
+                ]);
+            }
+        });
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Usage
+
+   // Minimal
+   {{ Model }}::factory()->create();
+
+   // Named scenario
+   {{ Model }}::factory()->overdue()->create();
+
+   // In a known tenant
+   {{ Model }}::factory()->for($this->tenant)->paid()->create();
+
+   // With children
+   {{ Model }}::factory()->hasLines(3)->create();
+   {{ Model }}::factory()->has(Line::factory()->count(3), 'lines')->create();
+
+   // Deterministic ordering — random timestamps make sort assertions flaky
+   {{ Model }}::factory()
+       ->count(3)
+       ->sequence(fn (Sequence $s) => ['created_at' => now()->subDays(3 - $s->index)])
+       ->create();
+
+   // Alternating states
+   {{ Model }}::factory()
+       ->count(6)
+       ->sequence(
+           ['status' => {{ Enum }}::Draft],
+           ['status' => {{ Enum }}::Paid],
+       )
+       ->create();
+
+   ─────────────────────────────────────────────────────────────────────────────
+   Build only what the test asserts on.
+
+   ✗ 50 records to prove the endpoint returns a list
+   ✓ 2 records prove ordering and filtering
+
+   Exceptions where volume IS the thing under test:
+     - N+1 detection (needs enough rows for the pattern to show)
+     - Pagination boundaries
+
+   ─────────────────────────────────────────────────────────────────────────────
+   Keep every factory honest with one test:
+
+   it('every factory produces a valid model', function (string $factory): void {
+       expect($factory::new()->create()->exists)->toBeTrue();
+   })->with(function (): array {
+       return collect(File::files(database_path('factories')))
+           ->map(fn ($f): string => 'Database\\Factories\\'.$f->getFilenameWithoutExtension())
+           ->filter(fn (string $c): bool => class_exists($c))
+           ->all();
+   });
+
+   This catches the broken factory before forty other tests fail with a
+   confusing error.
+   ───────────────────────────────────────────────────────────────────────────── */

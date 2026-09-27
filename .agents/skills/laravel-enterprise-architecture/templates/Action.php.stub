@@ -1,0 +1,37 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Actions\{{ Domain }};
+
+use App\DataTransferObjects\{{ Name }}Data;
+use App\Models\{{ Model }};
+use Illuminate\Support\Facades\DB;
+
+/**
+ * {{ One sentence: what business operation this performs. }}
+ */
+final class {{ Name }}
+{
+    public function __construct(
+        private readonly {{ Collaborator }} ${{ collaborator }},
+    ) {}
+
+    public function handle({{ Model }} ${{ model }}, {{ Name }}Data $data): {{ ReturnType }}
+    {
+        // 1. Guard domain invariants. Throw domain exceptions, never abort().
+        if (! ${{ model }}->{{ predicate }}()) {
+            throw new {{ DomainException }}(${{ model }});
+        }
+
+        // 2. Perform the operation inside a transaction if it touches >1 table.
+        return DB::transaction(function () use (${{ model }}, $data): {{ ReturnType }} {
+            // ... writes ...
+
+            // 3. Announce the fact. Consequences (mail, cache, webhooks) go in listeners.
+            {{ Name }}d::dispatch(${{ model }});
+
+            return ${{ result }};
+        });
+    }
+}

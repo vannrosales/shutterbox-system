@@ -1,0 +1,184 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Resources\V1;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Context;
+use Illuminate\Support\Number;
+
+/**
+ * @mixin \App\Models\{{ Model }}
+ *
+ * The ONLY place a {{ Model }} becomes JSON. This is the contract boundary:
+ * an allow-list, not a blocklist. A new column is invisible until someone
+ * adds it here deliberately.
+ *
+ * NEVER `return $model` — that serialises every column, and couples the API
+ * shape to the schema.
+ */
+final class {{ Model }}Resource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'id'        => $this->id,
+            'reference' => $this->reference,
+
+            // Enums: send the BACKED VALUE (machine) and a label (display).
+            // Never make the client map values to labels, or parse the label.
+            'status'       => $this->status->value,
+            'status_label' => $this->status->label(),
+
+            // Money: integer minor units + currency. NEVER a float —
+            // 0.1 + 0.2 !== 0.3, and JSON numbers lose precision.
+            'total' => [
+                'minor'     => $this->total_minor,
+                'currency'  => $this->currency,
+                'formatted' => Number::currency($this->total_minor / 100, $this->currency),
+            ],
+
+            // Dates: ISO 8601 in UTC. Never a locale-formatted string —
+            // the client owns presentation.
+            'issued_at'  => $this->issued_at?->toIso8601String(),
+            'due_on'     => $this->due_on?->toDateString(),      // date-only stays date-only
+            'created_at' => $this->created_at->toIso8601String(),
+            'updated_at' => $this->updated_at->toIso8601String(),
+
+            // ── Relations ────────────────────────────────────────────────────
+            // whenLoaded() is NOT optional. Without it a 50-item list issues 50
+            // extra queries — the single most common API performance bug.
+            // The key is OMITTED when not loaded, so the caller controls cost.
+            'customer' => CustomerResource::make($this->whenLoaded('customer')),
+            'lines'    => LineResource::collection($this->whenLoaded('lines')),
+
+            // Needs ->withCount('lines') on the query
+            'lines_count' => $this->whenCounted('lines'),
+
+            // ── Conditional fields ───────────────────────────────────────────
+            // Use a closure when the VALUE is expensive — when() evaluates its
+            // second argument eagerly otherwise.
+            'internal_notes' => $this->when(
+                $request->user()?->can('viewInternal', $this->resource) ?? false,
+                fn (): ?string => $this->internal_notes,
+            ),
+
+            $this->mergeWhen($request->user()?->isAdmin() ?? false, [
+                'created_by' => $this->created_by,
+                'tenant_id'  => $this->tenant_id,
+            ]),
+
+            // ── Permitted actions ────────────────────────────────────────────
+            // Removes duplicated business rules from every client. Eager load
+            // whatever the policy needs, or this N+1s — see laravel-performance.
+            'can' => [
+                'update' => $request->user()?->can('update', $this->resource) ?? false,
+                'delete' => $request->user()?->can('delete', $this->resource) ?? false,
+            ],
+        ];
+    }
+
+    /** Top-level additions merged into the response. */
+    public function with(Request $request): array
+    {
+        return [
+            'meta' => array_filter([
+                'request_id' => Context::get('request_id'),
+            ]),
+        ];
+    }
+
+    /** Headers and status for a single-resource response. */
+    public function withResponse(Request $request, $response): void
+    {
+        // Conditional GET support — a 304 costs the client nothing on mobile.
+        $response->setEtag(md5($this->id.$this->updated_at));
+
+        // Authenticated payloads must never sit in a shared cache.
+        $response->headers->set('Cache-Control', 'no-store, private');
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Custom collection — only when you need extra meta.
+
+   final class {{ Model }}Collection extends ResourceCollection
+   {
+       public $collects = {{ Model }}Resource::class;
+
+       public function toArray(Request $request): array
+       {
+           return [
+               'data' => $this->collection,
+               'meta' => [
+                   // CAREFUL: this only covers the CURRENT PAGE. If the total
+                   // should span the whole result set, compute it in the query.
+                   'page_total_minor' => $this->collection->sum('total_minor'),
+               ],
+           ];
+       }
+   }
+
+   ─────────────────────────────────────────────────────────────────────────────
+   Controller — the caller decides what to load, within a whitelist.
+
+   private const ALLOWED_INCLUDES = ['customer', 'lines'];
+   private const MAX_INCLUDES = 3;
+
+   $includes = collect(explode(',', (string) $request->query('include')))
+       ->filter()
+       ->intersect(self::ALLOWED_INCLUDES)   // whitelist: ?include=a.b.c.d is a DoS
+       ->take(self::MAX_INCLUDES)
+       ->all();
+
+   return {{ Model }}Resource::collection(
+       {{ Model }}::query()
+           ->visibleTo($request->user())      // tenant scope FIRST
+           ->with($includes)
+           ->withCount('lines')
+           ->cursorPaginate($request->integer('per_page', 20))
+           ->withQueryString()                 // or pagination links drop the filters
+   );
+
+   ─────────────────────────────────────────────────────────────────────────────
+   201 with a Location header:
+
+   return {{ Model }}Resource::make($model)
+       ->response()
+       ->setStatusCode(201)
+       ->header('Location', route('api.v1.{{ models }}.show', $model));
+
+   ─────────────────────────────────────────────────────────────────────────────
+   Tests — the third one is the one that matters. It fails the moment someone
+   adds a sensitive field without thinking.
+
+   it('returns the documented shape', function (): void {
+       $this->actingAs($user)->getJson("/api/v1/{{ models }}/{$model->id}")
+           ->assertOk()
+           ->assertJsonStructure([
+               'data' => ['id', 'reference', 'status', 'total' => ['minor', 'currency'], 'can'],
+               'meta' => ['request_id'],
+           ]);
+   });
+
+   it('omits relations that were not requested', function (): void {
+       $this->actingAs($user)->getJson("/api/v1/{{ models }}/{$model->id}")
+           ->assertJsonMissingPath('data.customer');
+   });
+
+   it('never exposes internal fields to a non-privileged user', function (): void {
+       $this->actingAs($viewer)->getJson("/api/v1/{{ models }}/{$model->id}")
+           ->assertJsonMissingPath('data.internal_notes')
+           ->assertJsonMissingPath('data.tenant_id');
+   });
+
+   it('lists with a bounded query count', function (): void {
+       {{ Model }}::factory()->count(50)->create();
+
+       assertQueryCountUnder(10, fn () =>
+           $this->actingAs($user)->getJson('/api/v1/{{ models }}?include=customer')->assertOk()
+       );
+   });
+   ───────────────────────────────────────────────────────────────────────────── */

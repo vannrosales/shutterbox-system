@@ -1,0 +1,139 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Jobs\Maintenance;
+
+use App\Models\{{ Model }};
+use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * Moves rows older than the cutoff from {{ table }} to {{ table }}_archive.
+ *
+ * Safety properties:
+ *   - Copy THEN delete, inside one transaction per chunk. A crash cannot lose data.
+ *   - insertOrIgnore makes a retry safe if the job died mid-chunk.
+ *   - Throttled so replication lag stays bounded.
+ *   - Unique, so two overlapping runs cannot fight.
+ *
+ * Schedule in routes/console.php:
+ *   Schedule::job(new Archive{{ Model }})->weeklyOn(0, '02:00')->withoutOverlapping();
+ */
+final class Archive{{ Model }} implements ShouldQueue, ShouldBeUnique
+{
+    use Queueable;
+
+    public int $timeout = 3600;
+    public int $tries = 1;                 // do not retry a half-finished archive blindly
+
+    private const CHUNK = 1000;
+    private const THROTTLE_MICROSECONDS = 100_000;   // 100ms between chunks
+
+    /** Columns copied to the archive table. Keep this list in sync with the schema. */
+    private const COLUMNS = [
+        'id',
+        'tenant_id',
+        'reference',
+        'status',
+        'total_minor',
+        'placed_at',
+        'created_at',
+        'updated_at',
+    ];
+
+    public function __construct(
+        private readonly int $retainMonths = 36,
+        private readonly ?int $maxRows = null,      // cap one run; null = until done
+    ) {
+        $this->onQueue('maintenance');
+    }
+
+    public function uniqueId(): string
+    {
+        return 'archive-{{ table }}';
+    }
+
+    public function handle(): void
+    {
+        $cutoff = now()->subMonths($this->retainMonths);
+        $archived = 0;
+
+        Log::info('Archive started', ['model' => '{{ Model }}', 'cutoff' => $cutoff->toDateString()]);
+
+        {{ Model }}::query()
+            ->where('placed_at', '<', $cutoff)
+            ->orderBy('id')
+            ->chunkById(self::CHUNK, function (Collection $rows) use (&$archived): bool {
+                DB::transaction(function () use ($rows): void {
+                    // 1. Copy. insertOrIgnore so a retried chunk is harmless.
+                    DB::table('{{ table }}_archive')->insertOrIgnore(
+                        $rows->map(fn ({{ Model }} $row): array =>
+                            Arr::only($row->getAttributes(), self::COLUMNS)
+                        )->all()
+                    );
+
+                    // 2. Delete only what we just copied.
+                    {{ Model }}::whereIn('id', $rows->modelKeys())->forceDelete();
+                });
+
+                $archived += $rows->count();
+
+                // Let replicas catch up — an unthrottled bulk move produces
+                // minutes of replication lag on a busy primary.
+                usleep(self::THROTTLE_MICROSECONDS);
+
+                // Stop early if this run has a cap.
+                return $this->maxRows === null || $archived < $this->maxRows;
+            });
+
+        Log::info('Archive finished', ['model' => '{{ Model }}', 'archived' => $archived]);
+    }
+
+    public function failed(?\Throwable $e): void
+    {
+        Log::error('Archive failed', [
+            'model' => '{{ Model }}',
+            'error' => $e?->getMessage(),
+        ]);
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Archive table migration — same shape, fewer indexes (written once, read rarely):
+
+   Schema::create('{{ table }}_archive', function (Blueprint $table): void {
+       $table->unsignedBigInteger('id')->primary();   // no auto-increment
+       $table->unsignedBigInteger('tenant_id');       // no FK constraint on an archive
+       $table->string('reference', 32);
+       $table->string('status', 32);
+       $table->unsignedBigInteger('total_minor');
+       $table->timestamp('placed_at');
+       $table->timestamps();
+
+       $table->index(['tenant_id', 'placed_at']);     // the one query users will run
+   });
+
+   ─────────────────────────────────────────────────────────────────────────────
+   Simpler alternatives — prefer these when they fit:
+
+   1. Pure deletion (nothing to keep):
+
+      use Illuminate\Database\Eloquent\MassPrunable;
+
+      public function prunable(): Builder
+      {
+          return static::where('created_at', '<', now()->subMonths(6));
+      }
+
+      Schedule::command('model:prune')->daily();
+
+   2. Partitioned table — DROP PARTITION is instant and needs no job at all.
+      See references/scaling.md. This is the right answer for high-volume
+      time-series data.
+   ───────────────────────────────────────────────────────────────────────────── */

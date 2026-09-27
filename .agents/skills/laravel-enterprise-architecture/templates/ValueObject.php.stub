@@ -1,0 +1,54 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\ValueObjects;
+
+use InvalidArgumentException;
+use Stringable;
+
+/**
+ * Immutable, self-validating, compared by value.
+ * Invalid instances must be impossible to construct.
+ */
+final readonly class {{ Name }} implements Stringable
+{
+    private function __construct(
+        public string $value,
+    ) {}
+
+    public static function fromString(string $value): self
+    {
+        $value = trim($value);
+
+        if ($value === '') {
+            throw new InvalidArgumentException('{{ Name }} cannot be empty.');
+        }
+
+        if (! self::isValid($value)) {
+            throw new InvalidArgumentException("Invalid {{ Name }}: {$value}");
+        }
+
+        return new self($value);
+    }
+
+    public static function tryFrom(string $value): ?self
+    {
+        return self::isValid(trim($value)) ? new self(trim($value)) : null;
+    }
+
+    private static function isValid(string $value): bool
+    {
+        return true; // real rule goes here
+    }
+
+    public function equals(self $other): bool
+    {
+        return $this->value === $other->value;
+    }
+
+    public function __toString(): string
+    {
+        return $this->value;
+    }
+}

@@ -1,0 +1,225 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Requests\Api\V1;
+
+use App\Enums\{{ Enum }};
+use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
+
+/**
+ * List endpoint request.
+ *
+ * Every parameter here is user input that reaches a query. ALL of it is
+ * whitelisted: an unvalidated `sort` reaching orderByRaw is SQL injection,
+ * an unvalidated `include` is a denial of service, an uncapped `per_page`
+ * is a one-request outage.
+ */
+final class List{{ Models }}Request extends FormRequest
+{
+    /** Adding a column here makes it sortable. There is no other path. */
+    public const SORTABLE = ['created_at', 'updated_at', 'reference', 'total_minor'];
+
+    public const FILTERABLE = ['status', 'customer_id', 'created_after', 'created_before', 'search'];
+
+    public const INCLUDABLE = ['customer', 'lines'];
+
+    public const MAX_INCLUDES = 3;
+    public const MAX_PER_PAGE = 100;
+
+    public function authorize(): bool
+    {
+        return $this->user()->can('viewAny', \App\Models\{{ Model }}::class);
+    }
+
+    public function rules(): array
+    {
+        return [
+            'filter'               => ['sometimes', 'array'],
+            'filter.status'        => ['sometimes', Rule::enum({{ Enum }}::class)],
+            'filter.customer_id'   => ['sometimes', 'integer'],
+            'filter.created_after' => ['sometimes', 'date', 'after:'.now()->subYears(5)->toDateString()],
+            'filter.created_before'=> ['sometimes', 'date', 'after_or_equal:filter.created_after'],
+            'filter.search'        => ['sometimes', 'string', 'min:2', 'max:100'],
+
+            // Whitelist includes the leading '-' for descending order.
+            'sort'     => ['sometimes', 'string', Rule::in($this->sortOptions())],
+            'include'  => ['sometimes', 'string', 'max:200'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:'.self::MAX_PER_PAGE],
+            'cursor'   => ['sometimes', 'string', 'max:500'],
+        ];
+    }
+
+    /**
+     * Reject unknown filter keys rather than ignoring them.
+     *
+     * `?filter[stat]=paid` silently returning EVERYTHING looks like a bug to the
+     * client and is a data-exposure bug in a multi-tenant system.
+     */
+    protected function prepareForValidation(): void
+    {
+        $unknown = array_diff(array_keys((array) $this->input('filter', [])), self::FILTERABLE);
+
+        if ($unknown !== []) {
+            throw new HttpResponseException(response()->json([
+                'message'    => __('Unknown filter: :keys', ['keys' => implode(', ', $unknown)]),
+                'error_code' => 'unknown_filter',
+            ], 422));
+        }
+    }
+
+    /** @return array{0: string, 1: string} [column, direction] */
+    public function sortColumn(): array
+    {
+        $sort = $this->string('sort', '-created_at')->toString();
+
+        return str_starts_with($sort, '-')
+            ? [substr($sort, 1), 'desc']
+            : [$sort, 'asc'];
+    }
+
+    /** @return list<string> */
+    public function includes(): array
+    {
+        return collect(explode(',', (string) $this->query('include')))
+            ->map(fn (string $i): string => trim($i))
+            ->filter()
+            ->intersect(self::INCLUDABLE)          // whitelist
+            ->take(self::MAX_INCLUDES)              // bound the query graph
+            ->values()
+            ->all();
+    }
+
+    public function perPage(): int
+    {
+        // Validate AND clamp — belt and braces.
+        return min($this->integer('per_page', 20), self::MAX_PER_PAGE);
+    }
+
+    /** @return list<string> */
+    private function sortOptions(): array
+    {
+        return collect(self::SORTABLE)
+            ->flatMap(fn (string $c): array => [$c, "-{$c}"])
+            ->all();
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Write request
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+final class Store{{ Model }}Request extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return $this->user()->can('create', \App\Models\{{ Model }}::class);
+    }
+
+    public function rules(): array
+    {
+        return [
+            'reference' => [
+                'required', 'string', 'max:32',
+                // Uniqueness is PER TENANT, not global.
+                Rule::unique('{{ table }}', 'reference')
+                    ->where('tenant_id', $this->user()->tenant_id),
+            ],
+
+            // Enum rules exclude privileged values — privilege escalation is a
+            // validation problem before it is an authorization problem.
+            'status' => ['required', Rule::enum({{ Enum }}::class)->except({{ Enum }}::Void)],
+
+            // Money arrives as integer minor units. Reject floats outright.
+            'total_minor' => ['required', 'integer', 'min:0', 'max:99999999999'],
+            'currency'    => ['required', 'string', 'size:3', Rule::in(['PHP', 'USD'])],
+
+            // Dates: ISO 8601 only. Ambiguous formats cause silent misparsing.
+            'issued_at' => ['required', 'date_format:Y-m-d\TH:i:sP'],
+            'due_on'    => ['required', 'date_format:Y-m-d', 'after_or_equal:issued_at'],
+
+            // EVERY array needs a max — otherwise one request allocates unbounded memory.
+            'lines'                => ['required', 'array', 'min:1', 'max:200'],
+            'lines.*.description'  => ['required', 'string', 'max:255'],
+            'lines.*.quantity'     => ['required', 'integer', 'min:1', 'max:100000'],
+            'lines.*.unit_price_minor' => ['required', 'integer', 'min:0'],
+
+            'metadata' => ['sometimes', 'array', 'max:20'],
+            'metadata.*' => ['string', 'max:500'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'lines.max'        => __('An invoice may contain at most 200 lines.'),
+            'total_minor.integer' => __('Amounts must be sent in minor units (centavos) as whole numbers.'),
+        ];
+    }
+
+    /**
+     * Guarantee the API error envelope even when validation fails.
+     * The global handler covers this — override only if this endpoint differs.
+     */
+    protected function failedValidation(Validator $validator): void
+    {
+        throw new HttpResponseException(response()->json([
+            'message'    => __('The given data was invalid.'),
+            'errors'     => $validator->errors()->toArray(),
+            'error_code' => 'validation_failed',
+            'request_id' => \Illuminate\Support\Facades\Context::get('request_id'),
+        ], 422));
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Controller usage
+
+   public function __invoke(List{{ Models }}Request $request): AnonymousResourceCollection
+   {
+       [$column, $direction] = $request->sortColumn();
+       $filters = $request->collect('filter');
+
+       return {{ Model }}Resource::collection(
+           {{ Model }}::query()
+               ->visibleTo($request->user())            // tenant scope FIRST, always
+               ->when($filters->get('status'), fn ($q, $s) => $q->where('status', $s))
+               ->when($filters->get('search'), fn ($q, $t) => $q->whereFullText(['reference'], $t))
+               ->with($request->includes())
+               ->withCount('lines')
+               ->orderBy($column, $direction)
+               ->orderBy('id', $direction)              // tiebreaker: cursor pagination
+               ->cursorPaginate($request->perPage())    //   skips/repeats rows without it
+               ->withQueryString()                       // or "next page" drops the filters
+       );
+   }
+
+   ─────────────────────────────────────────────────────────────────────────────
+   Tests
+
+   it('rejects an unknown sort column', function (): void {
+       $this->actingAs($user)->getJson('/api/v1/{{ table }}?sort=password')
+           ->assertUnprocessable();
+   });
+
+   it('rejects an unknown filter key', function (): void {
+       $this->actingAs($user)->getJson('/api/v1/{{ table }}?filter[secret]=1')
+           ->assertUnprocessable()
+           ->assertJsonPath('error_code', 'unknown_filter');
+   });
+
+   it('caps per_page', function (): void {
+       $this->actingAs($user)->getJson('/api/v1/{{ table }}?per_page=1000')
+           ->assertUnprocessable();
+   });
+
+   it('never returns another tenant\'s records', function (): void {
+       {{ Model }}::factory()->count(5)->create();      // other tenants
+
+       $this->actingAs($user)->getJson('/api/v1/{{ table }}')
+           ->assertJsonCount(0, 'data');
+   });
+   ───────────────────────────────────────────────────────────────────────────── */

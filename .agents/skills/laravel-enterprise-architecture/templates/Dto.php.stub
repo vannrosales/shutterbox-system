@@ -1,0 +1,37 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\DataTransferObjects;
+
+use App\Http\Requests\{{ Name }}Request;
+
+final readonly class {{ Name }}Data
+{
+    public function __construct(
+        public string $requiredField,
+        public ?int $optionalField = null,
+    ) {}
+
+    public static function fromRequest({{ Name }}Request $request): self
+    {
+        return new self(
+            requiredField: $request->string('required_field')->trim()->toString(),
+            optionalField: $request->integer('optional_field') ?: null,
+        );
+    }
+
+    /** @param array{required_field: string, optional_field?: int|null} $attributes */
+    public static function fromArray(array $attributes): self
+    {
+        return new self(
+            requiredField: $attributes['required_field'],
+            optionalField: $attributes['optional_field'] ?? null,
+        );
+    }
+
+    // PHP 8.4 property hook for derived values — pure computation only, no I/O.
+    // public string $slug {
+    //     get => Str::slug($this->requiredField);
+    // }
+}

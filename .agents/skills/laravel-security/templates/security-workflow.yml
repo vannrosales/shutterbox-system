@@ -1,0 +1,205 @@
+> Copy to `.github/workflows/security.yml`.
+> Every job here fails the build. A security check that only warns gets ignored.
+
+```yaml
+name: Security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Advisories are published continuously — a passing build last week means nothing today
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  dependencies:
+    name: Dependency advisories
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - run: composer install --no-interaction --prefer-dist --no-progress
+
+      # Fails on any known advisory in the lock file
+      - name: Composer audit
+        run: composer audit --no-interaction
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+      - name: npm audit
+        run: npm audit --audit-level=high
+
+  secrets:
+    name: Secret scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # gitleaks needs full history
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # A committed .env is a breach, not a lint error
+      - name: Assert .env is not tracked
+        run: |
+          if git ls-files --error-unmatch .env 2>/dev/null; then
+            echo "::error::.env is tracked in git. Rotate every secret it contains, then remove it."
+            exit 1
+          fi
+
+      - name: Assert .env never existed in history
+        run: |
+          if git log --all --full-history --oneline -- .env | grep -q .; then
+            echo "::error::.env appears in git history. Rotate every secret it ever contained."
+            exit 1
+          fi
+
+  static-analysis:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: PHPStan
+        run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+
+      # Psalm taint analysis is the only widely-available PHP tool that traces
+      # $request->input() into DB::raw() and flags it.
+      - name: Psalm taint analysis
+        run: vendor/bin/psalm --taint-analysis --no-cache
+        continue-on-error: true    # remove once the baseline is clean
+
+  code-patterns:
+    name: Dangerous patterns
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: env() outside config/
+        run: |
+          if grep -rn --include="*.php" "env(" app/ routes/ database/ 2>/dev/null; then
+            echo "::error::env() must only be called in config/ files — it returns null once config is cached."
+            exit 1
+          fi
+
+      - name: Mass assignment exposure
+        run: |
+          if grep -rn --include="*.php" 'protected \$guarded = \[\]' app/Models/ 2>/dev/null; then
+            echo "::error::\$guarded = [] exposes every column to mass assignment. Use \$fillable."
+            exit 1
+          fi
+
+      - name: Raw SQL with interpolation
+        run: |
+          if grep -rnE --include="*.php" '(whereRaw|selectRaw|orderByRaw|havingRaw|DB::(select|statement|raw))\(.*\$' app/ 2>/dev/null; then
+            echo "::error::Raw SQL containing a PHP variable. Use bindings, or whitelist column names."
+            exit 1
+          fi
+
+      - name: Dangerous PHP functions
+        run: |
+          if grep -rnE --include="*.php" '\b(eval|unserialize|shell_exec|passthru|proc_open)\s*\(' app/ 2>/dev/null; then
+            echo "::error::Dangerous function found. unserialize() on untrusted input is RCE."
+            exit 1
+          fi
+
+      - name: Unescaped Blade output
+        run: |
+          # {!! !!} is sometimes legitimate — this warns rather than fails.
+          grep -rn '{!!' resources/views/ 2>/dev/null \
+            && echo "::warning::Unescaped Blade output found. Confirm the content is sanitised." || true
+
+      - name: Debug mode in committed env example
+        run: |
+          if grep -qE '^APP_DEBUG=true' .env.example 2>/dev/null; then
+            echo "::warning::.env.example sets APP_DEBUG=true. Ensure production does not."
+          fi
+
+  headers:
+    name: Security headers (staging)
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Check response headers
+        run: |
+          URL="${{ secrets.STAGING_URL }}"
+          [ -z "$URL" ] && { echo "STAGING_URL not set, skipping"; exit 0; }
+
+          HEADERS=$(curl -sI "$URL")
+          fail=0
+
+          for h in "strict-transport-security" "x-content-type-options" \
+                   "x-frame-options" "content-security-policy" "referrer-policy"; do
+            echo "$HEADERS" | grep -qi "$h" || { echo "::error::Missing header: $h"; fail=1; }
+          done
+
+          echo "$HEADERS" | grep -qi "x-powered-by" \
+            && echo "::warning::X-Powered-By is exposed; remove it in php.ini (expose_php = Off)"
+
+          exit $fail
+
+      - name: Sensitive paths must not be reachable
+        run: |
+          URL="${{ secrets.STAGING_URL }}"
+          [ -z "$URL" ] && exit 0
+
+          for path in ".env" ".git/config" "storage/logs/laravel.log" \
+                      "telescope" "composer.json" "phpunit.xml"; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$URL/$path")
+            if [ "$code" = "200" ]; then
+              echo "::error::$path is publicly reachable (HTTP 200)"
+              exit 1
+            fi
+          done
+```
+
+## Local pre-commit equivalent
+
+```bash
+#!/usr/bin/env bash
+# .git/hooks/pre-commit
+
+set -e
+
+git diff --cached --name-only | grep -q '^\.env$' && {
+    echo "Refusing to commit .env"; exit 1;
+}
+
+git diff --cached -U0 | grep -E '^\+' | grep -qE '(sk_live|AKIA[0-9A-Z]{16}|-----BEGIN.*PRIVATE KEY)' && {
+    echo "Possible secret in staged changes"; exit 1;
+}
+
+vendor/bin/pint --test
+vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+```
+
+## Notes
+
+- **Do not add exclusions to make the build green.** Fix the finding, or record it with an
+  owner and a date.
+- The `code-patterns` job uses grep, so it produces false positives on legitimate uses.
+  When one appears, narrow the pattern — do not delete the check.
+- Schedule the dependency job weekly: advisories are published continuously, and a build
+  that passed on Monday may be vulnerable by Friday.

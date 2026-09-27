@@ -1,0 +1,123 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
+
+abstract class TestCase extends BaseTestCase
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        /*
+         * The single highest-value line in this file.
+         *
+         * Without it, a test that forgets Http::fake() makes a REAL network call:
+         * slow, flaky, dependent on someone else's uptime, and occasionally
+         * charging real money to a real card. With it, the stray call throws
+         * immediately, naming the URL.
+         */
+        Http::preventStrayRequests();
+
+        /*
+         * Catch N+1s in tests rather than in production. Any lazy load in a test
+         * now throws with the model and relation named.
+         */
+        Model::preventLazyLoading();
+
+        /*
+         * Throw when a write includes an attribute that is not fillable, instead
+         * of silently discarding it. Catches typos and mass-assignment mistakes.
+         */
+        Model::preventSilentlyDiscardingAttributes();
+
+        /*
+         * Deterministic fake data. A test that fails one run in fifty because
+         * Faker generated a boundary value is worse than no test.
+         */
+        fake()->seed(1234);
+
+        /*
+         * SQLite has foreign keys OFF by default, so broken FK constraints never
+         * surface locally. Turn them on so the in-memory suite catches at least
+         * the integrity errors that MySQL would.
+         */
+        if (config('database.default') === 'sqlite') {
+            \DB::statement('PRAGMA foreign_keys = ON');
+        }
+    }
+
+    protected function tearDown(): void
+    {
+        // Guard against a test that asserts nothing about notifications while
+        // silently sending them. Uncomment if that becomes a problem:
+        // Notification::assertNothingSent();
+
+        parent::tearDown();
+    }
+
+    /**
+     * Freeze time for the duration of a test.
+     *
+     * Prefer this over asserting on an unfrozen now() — a comparison that
+     * crosses a second boundary fails at random.
+     */
+    protected function frozen(callable $callback): mixed
+    {
+        $this->freezeTime();
+
+        return $callback();
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   tests/DuskTestCase.php
+
+   abstract class DuskTestCase extends BaseTestCase
+   {
+       use CreatesApplication;
+
+       public static function prepare(): void
+       {
+           if (! static::runningInSail()) {
+               static::startChromeDriver(['--port=9515']);
+           }
+       }
+
+       protected function driver(): RemoteWebDriver
+       {
+           $options = (new ChromeOptions)->addArguments(collect([
+               $this->shouldStartMaximized() ? '--start-maximized' : '--window-size=1920,1080',
+               '--disable-search-engine-choice-screen',
+               '--disable-smooth-scrolling',
+           ])->unless($this->hasHeadlessDisabled(), fn ($items) => $items->merge([
+               '--disable-gpu', '--headless=new', '--no-sandbox',
+           ]))->all());
+
+           return RemoteWebDriver::create(
+               $_ENV['DUSK_DRIVER_URL'] ?? 'http://localhost:9515',
+               DesiredCapabilities::chrome()->setCapability(ChromeOptions::CAPABILITY, $options)
+           );
+       }
+   }
+
+   Browser tests use DatabaseTruncation, not RefreshDatabase: the browser runs
+   in a separate process, so a transaction cannot span both.
+
+   ─────────────────────────────────────────────────────────────────────────────
+   Per-process setup for parallel runs — reference data that every database needs.
+
+   // In a service provider or tests/Pest.php
+   ParallelTesting::setUpTestDatabase(function (string $database, int $token): void {
+       Artisan::call('db:seed', ['--class' => ReferenceDataSeeder::class]);
+   });
+
+   Do NOT run the full DatabaseSeeder — a test that depends on demo data breaks
+   whenever someone edits it, and its real preconditions become invisible.
+   ───────────────────────────────────────────────────────────────────────────── */

@@ -1,0 +1,126 @@
+# {{ Project Name }}
+
+{{ One sentence: what this application does and who uses it. }}
+
+## Stack
+
+- Laravel {{ 12 }} / PHP {{ 8.4 }}
+- {{ MySQL 8.4 }} / {{ Redis 7 }}
+- {{ Livewire 3 }} / {{ Tailwind 4 }}
+- {{ Pest }} for tests
+
+## Engineering standards
+
+This project follows the **Laravel Enterprise Skill Library**.
+
+**Load `laravel-ai-coding-standards` before any code change.** It analyses the project,
+routes to the other skills, and defines the output contract.
+
+Non-negotiable gates before merge:
+
+- `composer qa` passes (Pint, PHPStan, tests)
+- `laravel-security` checklist for anything touching money, PII, auth, or file uploads
+- `laravel-ui-accessibility` + `laravel-responsive-design` sign-off for public-facing UI
+
+## Project-specific rules
+
+These **override** the library's defaults. Keep the list short enough to be read.
+
+<!-- Replace these with the project's actual conventions. Delete what does not apply. -->
+
+- Business logic lives in `app/Actions`, one public `handle()` per class. **No services.**
+- We do **not** use repositories. Eloquent directly in actions.
+- DTOs are hand-rolled `final readonly` classes in `app/DataTransferObjects`.
+- Money is always integer minor units, in a `*_minor` column. Never a float.
+- Multi-tenant: every table has `tenant_id`; every composite index leads with it.
+  Cross-tenant access returns **404**, never 403.
+- Controllers are invokable, single-action.
+- Tests are Pest, not PHPUnit classes.
+- Every user-visible string goes through `__()`. Locales: `en`, `fil`.
+- Dates stored UTC, displayed `Asia/Manila`.
+
+## Where things go
+
+| Thing | Location |
+|---|---|
+| Business operation | `app/Actions/<Domain>/` |
+| Input shape | `app/DataTransferObjects/` |
+| Validation | `app/Http/Requests/` |
+| Reusable rule | `app/Rules/` |
+| Authorization | `app/Policies/` |
+| Fixed set of states | `app/Enums/` |
+| Something happened | `app/Events/` |
+| React to it | `app/Listeners/` |
+| Deferred work | `app/Jobs/` |
+| Third-party wrapper | `app/Support/<Vendor>/` |
+| JSON output | `app/Http/Resources/V1/` |
+
+## Commands
+
+```bash
+composer qa                    # lint + static analysis + tests
+composer fix                   # apply Pint
+php artisan test --parallel
+php artisan test --dirty       # only what changed
+```
+
+## Local setup
+
+```bash
+composer install && npm install
+cp .env.example .env && php artisan key:generate
+php artisan migrate --seed
+npm run dev
+```
+
+Log in as `{{ admin@example.com }}` / `{{ password }}`.
+
+## Things to know before changing anything
+
+<!-- The gotchas a new contributor would otherwise learn the hard way. -->
+
+- `Model::shouldBeStrict()` is enabled in non-production — a lazy load throws.
+- `Relation::enforceMorphMap()` is set in `AppServiceProvider`. **New morphable models must
+  be registered there** or polymorphic relations break.
+- `TenantScope` is a global scope on every tenant-owned model. Queries in jobs and commands
+  must set `Context::add('tenant_id', ...)` explicitly.
+- The `{{ orders }}` table is large ({{ 40M }} rows). Use `cursorPaginate()`, and check
+  `EXPLAIN` before adding a query to a hot path.
+- Webhooks from {{ PayMongo }} are CSRF-exempt because they are signature-verified. Do not
+  add other exemptions.
+
+## Out of scope for routine changes
+
+Report these; do not fix them inside a feature PR:
+
+- {{ The legacy `app/Legacy` namespace — being replaced, do not invest }}
+- {{ Known PHPStan baseline entries }}
+
+## Deployment
+
+See `docs/deployment.md`. Rollback: `docs/runbook.md`.
+
+---
+
+<!--
+  ─────────────────────────────────────────────────────────────────────────
+  Notes on writing this file
+
+  1. Project rules OVERRIDE the library. Say so explicitly, as above.
+
+  2. Keep it SHORT. A CLAUDE.md nobody finishes is a CLAUDE.md nobody reads.
+     Target: one screen. Depth belongs in docs/.
+
+  3. Write down what you would otherwise have to say twice. If you have
+     corrected the same thing in two code reviews, it belongs here.
+
+  4. Do NOT duplicate the codebase. "Controllers are in app/Http/Controllers"
+     is discoverable; "we do not use repositories" is not.
+
+  5. Keep it TRUE. A stale rule is worse than a missing one, because someone
+     will follow it. Review when a convention changes.
+
+  6. The "things to know" section is the highest-value part — the gotchas
+     that are invisible from reading the code.
+  ─────────────────────────────────────────────────────────────────────────
+-->

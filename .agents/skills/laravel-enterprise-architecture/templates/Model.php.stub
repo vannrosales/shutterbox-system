@@ -1,0 +1,82 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Models;
+
+use App\Casts\MoneyCast;
+use App\Enums\{{ Enum }};
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+final class {{ Model }} extends Model
+{
+    use HasFactory;
+    use SoftDeletes;   // only if there is a real recovery/audit requirement
+
+    /**
+     * Explicit allow-list. NEVER `$guarded = []` — that is a mass-assignment hole.
+     * @var list<string>
+     */
+    protected $fillable = [
+        'tenant_id',
+        'name',
+        'status',
+    ];
+
+    /** @var list<string> */
+    protected $hidden = ['secret_token'];
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return [
+            'status'       => {{ Enum }}::class,
+            'total'        => MoneyCast::class,
+            'settings'     => 'array',
+            'published_at' => 'immutable_datetime',
+        ];
+    }
+
+    // ── Relationships ────────────────────────────────────────────────────────
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
+    /** @return HasMany<{{ Child }}, $this> */
+    public function items(): HasMany
+    {
+        return $this->hasMany({{ Child }}::class);
+    }
+
+    // ── Scopes — reusable query fragments, not business decisions ────────────
+
+    public function scopePublished(Builder $query): void
+    {
+        $query->whereNotNull('published_at')->where('published_at', '<=', now());
+    }
+
+    public function scopeForTenant(Builder $query, int $tenantId): void
+    {
+        $query->where('tenant_id', $tenantId);
+    }
+
+    // ── Predicates — questions the model can answer about ITSELF ─────────────
+
+    public function isPublished(): bool
+    {
+        return $this->published_at !== null && $this->published_at->isPast();
+    }
+
+    // ── NOT allowed here ─────────────────────────────────────────────────────
+    // ✗ sending mail / notifications
+    // ✗ HTTP calls
+    // ✗ coordinating other aggregates
+    // ✗ heavy static::creating() hooks that hide control flow
+}

@@ -1,0 +1,225 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Jobs;
+
+use App\Models\Media;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Interfaces\ImageInterface;
+use Throwable;
+
+/**
+ * Generates responsive derivatives for an uploaded image.
+ *
+ * Always queued: image processing takes seconds and hundreds of megabytes.
+ * Doing it in the request blocks a PHP-FPM worker and risks a timeout.
+ *
+ * Dispatch with ->afterCommit() or the job can start before the row is visible.
+ */
+final class ProcessMedia implements ShouldQueue, ShouldBeUnique
+{
+    use Queueable;
+
+    public int $tries = 3;
+    public int $timeout = 300;
+    public array $backoff = [30, 120, 600];
+
+    /** Quality per format. AVIF uses a different scale — 55 ≈ JPEG 85. */
+    private const QUALITY = [
+        'avif' => 55,
+        'webp' => 82,
+        'jpg'  => 82,
+    ];
+
+    public function __construct(
+        public readonly int $mediaId,
+        public readonly bool $force = false,
+    ) {
+        $this->onQueue('media');
+    }
+
+    public function uniqueId(): string
+    {
+        return (string) $this->mediaId;
+    }
+
+    public function handle(ImageManager $manager): void
+    {
+        $media = Media::find($this->mediaId);
+
+        if ($media === null) {
+            return;                     // deleted between dispatch and execution
+        }
+
+        if ($media->isProcessed() && ! $this->force) {
+            return;                     // idempotent: a retry must not redo the work
+        }
+
+        if (! $media->isImage()) {
+            $media->update(['processed_at' => now()]);
+            return;
+        }
+
+        // An 8000x8000 image needs ~256MB decoded regardless of file size.
+        // Cap dimensions at validation so this ceiling stays predictable.
+        $previousLimit = ini_set('memory_limit', '512M');
+
+        try {
+            $this->generate($manager, $media);
+
+            $media->update([
+                'processed_at' => now(),
+                'failed_at'    => null,
+            ]);
+        } catch (Throwable $e) {
+            $media->update(['failed_at' => now()]);
+
+            Log::error('Derivative generation failed', [
+                'media' => $media->id,
+                'mime'  => $media->mime_type,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;                   // let the queue retry
+        } finally {
+            ini_set('memory_limit', $previousLimit);
+        }
+    }
+
+    private function generate(ImageManager $manager, Media $media): void
+    {
+        $disk = Storage::disk($media->disk);
+        $sourcePath = $disk->path($media->path);
+
+        $probe = $manager->read($sourcePath);
+        $sourceWidth = $probe->width();
+
+        $media->update([
+            'width'  => $sourceWidth,
+            'height' => $probe->height(),
+        ]);
+
+        unset($probe);
+
+        $derivatives = [];
+
+        foreach (Media::SIZES as $name => $width) {
+            // NEVER upscale — a 400px source at 1920px is blurry AND larger.
+            if ($sourceWidth < $width) {
+                continue;
+            }
+
+            foreach (Media::FORMATS as $format) {
+                // Re-read per derivative: more CPU, but bounds peak memory. The
+                // right trade for a worker processing many jobs back to back.
+                $image = $manager->read($sourcePath);
+
+                // Apply the EXIF rotation flag BEFORE encoding. Encoding drops
+                // EXIF (a privacy requirement — phone photos carry GPS), so the
+                // flag would otherwise be lost and portraits render sideways.
+                $image->orient()->scaleDown(width: $width);
+
+                $disk->put(
+                    $media->derivativePath($name, $format),
+                    (string) $image->encodeByExtension($format, quality: self::QUALITY[$format]),
+                    ['CacheControl' => 'public, max-age=31536000, immutable'],
+                );
+
+                $derivatives[$format][$name] = $width;
+
+                unset($image);
+            }
+        }
+
+        // JPEG fallback at the largest generated size, for the <img> src
+        $this->generateFallback($manager, $media, $sourcePath, $sourceWidth, $derivatives);
+
+        $media->update([
+            'derivatives' => $derivatives,
+            'placeholder' => $this->placeholder($manager, $sourcePath),
+        ]);
+    }
+
+    private function generateFallback(
+        ImageManager $manager,
+        Media $media,
+        string $sourcePath,
+        int $sourceWidth,
+        array &$derivatives,
+    ): void {
+        $width = min($sourceWidth, Media::SIZES['medium']);
+
+        $image = $manager->read($sourcePath)->orient()->scaleDown(width: $width);
+
+        Storage::disk($media->disk)->put(
+            $media->derivativePath('medium', 'jpg'),
+            (string) $image->encodeByExtension('jpg', quality: self::QUALITY['jpg'], progressive: true),
+            ['CacheControl' => 'public, max-age=31536000, immutable'],
+        );
+
+        $derivatives['jpg']['medium'] = $width;
+    }
+
+    /**
+     * Tiny blurred data-URI placeholder. Keep it under ~1KB or the saving is
+     * negative — a solid dominant colour is often enough and costs 7 bytes.
+     */
+    private function placeholder(ImageManager $manager, string $sourcePath): ?string
+    {
+        try {
+            $encoded = $manager->read($sourcePath)
+                ->orient()
+                ->scaleDown(width: 20)
+                ->blur(5)
+                ->encodeByExtension('webp', quality: 40);
+
+            return 'data:image/webp;base64,'.base64_encode((string) $encoded);
+        } catch (Throwable) {
+            return null;                // a missing placeholder is not worth failing the job
+        }
+    }
+
+    public function failed(?Throwable $e): void
+    {
+        Media::whereKey($this->mediaId)->update(['failed_at' => now()]);
+
+        Log::error('ProcessMedia exhausted retries', [
+            'media' => $this->mediaId,
+            'error' => $e?->getMessage(),
+        ]);
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Dispatch — afterCommit() is not optional
+
+   DB::transaction(function () use ($file, $model) {
+       $media = $model->media()->create([...]);
+       ProcessMedia::dispatch($media->id)->afterCommit();
+       return $media;
+   });
+
+   Without afterCommit(), the worker can pick the job up before the transaction
+   commits and find no row. Intermittent, environment-dependent, and miserable
+   to diagnose.
+
+   ─────────────────────────────────────────────────────────────────────────────
+   The UI must handle three states — see the Blade component template.
+
+   @if ($media->isProcessed())      full <picture> with srcset
+   @elseif ($media->hasFailed())    fall back to the original
+   @else                            role="status" "still processing"
+
+   ─────────────────────────────────────────────────────────────────────────────
+   Reprocessing after changing sizes or formats:
+
+   php artisan media:reprocess --since=2026-01-01 --type=image
+
+   Keep the original. Everything else is regenerable; the original is not.
+   ───────────────────────────────────────────────────────────────────────────── */

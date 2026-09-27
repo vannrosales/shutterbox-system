@@ -1,0 +1,57 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Jobs;
+
+use App\Actions\{{ Domain }}\{{ Action }};
+use App\Models\{{ Model }};
+use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
+use Throwable;
+
+final class {{ Name }} implements ShouldQueue, ShouldBeUnique
+{
+    use Queueable;
+
+    public int $tries = 3;
+    public int $timeout = 120;
+
+    /** @var array<int, int> seconds between retries */
+    public array $backoff = [10, 60, 300];
+
+    /** Stop retrying after this point even if $tries remain. */
+    public function retryUntil(): \DateTimeInterface
+    {
+        return now()->addHour();
+    }
+
+    public function __construct(
+        public readonly int ${{ model }}Id,     // pass IDs, not hydrated models
+    ) {
+        $this->onQueue('{{ queue }}');
+    }
+
+    /** Prevents duplicate concurrent dispatches of the same unit of work. */
+    public function uniqueId(): string
+    {
+        return (string) $this->{{ model }}Id;
+    }
+
+    public function handle({{ Action }} $action): void
+    {
+        // Thin: this is an entrypoint. All logic lives in the action.
+        // Must be idempotent — this method can run more than once.
+        $action->handle({{ Model }}::findOrFail($this->{{ model }}Id));
+    }
+
+    public function failed(?Throwable $e): void
+    {
+        Log::error('{{ Name }} failed', [
+            '{{ model }}_id' => $this->{{ model }}Id,
+            'error'          => $e?->getMessage(),
+        ]);
+    }
+}

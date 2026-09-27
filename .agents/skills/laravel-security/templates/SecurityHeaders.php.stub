@@ -1,0 +1,195 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\View;
+use Symfony\Component\HttpFoundation\Response;
+
+/**
+ * Security headers with a nonce-based Content Security Policy.
+ *
+ * Register globally in bootstrap/app.php:
+ *
+ *   ->withMiddleware(function (Middleware $middleware): void {
+ *       $middleware->append(SecurityHeaders::class);
+ *   })
+ *
+ * Roll-out procedure — do NOT enforce on day one:
+ *   1. Set CSP_REPORT_ONLY=true. Deploy. Collect violations for ~1 week.
+ *   2. Fix legitimate breakage (usually inline handlers and third-party scripts).
+ *   3. Set CSP_REPORT_ONLY=false.
+ *
+ * A CSP containing 'unsafe-inline' in script-src provides essentially no XSS
+ * protection. If the codebase has many onclick= handlers, adopting CSP is a
+ * refactor, not a header change.
+ */
+final class SecurityHeaders
+{
+    public function handle(Request $request, Closure $next): Response
+    {
+        // One unpredictable nonce per request. A reused or guessable nonce
+        // defeats the entire policy.
+        $nonce = base64_encode(random_bytes(16));
+
+        $request->attributes->set('csp_nonce', $nonce);
+        View::share('cspNonce', $nonce);
+
+        $response = $next($request);
+
+        // Do not add HTML security headers to non-HTML responses (downloads, images).
+        $contentType = (string) $response->headers->get('Content-Type');
+        $isHtml = str_contains($contentType, 'text/html') || $contentType === '';
+
+        $response->headers->add(array_filter([
+            'X-Content-Type-Options'       => 'nosniff',
+            'X-Frame-Options'              => 'DENY',
+            'Referrer-Policy'              => 'strict-origin-when-cross-origin',
+            'Permissions-Policy'           => $this->permissionsPolicy(),
+            'Cross-Origin-Opener-Policy'   => 'same-origin',
+            'Cross-Origin-Resource-Policy' => 'same-origin',
+            'X-Permitted-Cross-Domain-Policies' => 'none',
+        ]));
+
+        // HSTS only over HTTPS, and only in production.
+        if ($request->secure() && app()->isProduction()) {
+            $response->headers->set(
+                'Strict-Transport-Security',
+                'max-age=31536000; includeSubDomains; preload'
+            );
+        }
+
+        if ($isHtml) {
+            $header = config('security.csp_report_only', false)
+                ? 'Content-Security-Policy-Report-Only'
+                : 'Content-Security-Policy';
+
+            $response->headers->set($header, $this->contentSecurityPolicy($nonce));
+        }
+
+        // Never let a browser or proxy cache an authenticated page.
+        if ($request->user() !== null) {
+            $response->headers->set('Cache-Control', 'no-store, private');
+        }
+
+        return $response;
+    }
+
+    private function contentSecurityPolicy(string $nonce): string
+    {
+        $directives = [
+            "default-src 'self'",
+
+            // 'strict-dynamic': scripts loaded BY a nonce-approved script are trusted too.
+            // This is what makes bundled/dynamic imports work without listing every host.
+            "script-src 'self' 'nonce-{$nonce}' 'strict-dynamic'",
+
+            // Many CSS-in-JS and utility frameworks inject style tags. If you cannot
+            // avoid it, 'unsafe-inline' here is a far smaller risk than in script-src.
+            "style-src 'self' 'nonce-{$nonce}'",
+
+            "img-src 'self' data: blob: ".config('security.cdn_url', ''),
+            "font-src 'self' data:",
+            "connect-src 'self'",
+            "media-src 'self'",
+
+            // No plugins, ever. Closes a class of CSP bypasses.
+            "object-src 'none'",
+
+            // Prevents <base> injection from re-pointing every relative URL.
+            "base-uri 'self'",
+
+            // Prevents an injected form from posting credentials to an attacker.
+            "form-action 'self'",
+
+            // Modern replacement for X-Frame-Options. Keep both for older browsers.
+            "frame-ancestors 'none'",
+
+            "manifest-src 'self'",
+            'upgrade-insecure-requests',
+        ];
+
+        // Vite dev server needs websocket + http access during local development.
+        if (app()->isLocal()) {
+            $devServer = 'http://localhost:5173 ws://localhost:5173';
+            $directives = array_map(
+                fn (string $d): string => str_starts_with($d, 'connect-src')
+                    ? $d.' '.$devServer
+                    : $d,
+                $directives,
+            );
+            $directives[] = "script-src-elem 'self' 'nonce-{$nonce}' http://localhost:5173";
+        }
+
+        if ($uri = config('security.csp_report_uri')) {
+            $directives[] = "report-uri {$uri}";
+        }
+
+        return implode('; ', array_filter($directives));
+    }
+
+    private function permissionsPolicy(): string
+    {
+        return implode(', ', [
+            'accelerometer=()',
+            'autoplay=()',
+            'camera=()',
+            'display-capture=()',
+            'encrypted-media=()',
+            'fullscreen=(self)',
+            'geolocation=()',
+            'gyroscope=()',
+            'magnetometer=()',
+            'microphone=()',
+            'midi=()',
+            'payment=()',
+            'usb=()',
+        ]);
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   config/security.php
+
+   return [
+       'csp_report_only' => env('CSP_REPORT_ONLY', false),
+       'csp_report_uri'  => env('CSP_REPORT_URI', '/csp-report'),
+       'cdn_url'         => env('CDN_URL', ''),
+   ];
+
+   ─────────────────────────────────────────────────────────────────────────────
+   Blade — inline scripts must carry the nonce:
+
+   <script nonce="{{ $cspNonce }}">
+       // allowed
+   </script>
+
+   Laravel injects the nonce into @vite tags automatically after:
+
+   // AppServiceProvider::boot()
+   Vite::useCspNonce();
+
+   ─────────────────────────────────────────────────────────────────────────────
+   Violation report endpoint — rate limit it; it is unauthenticated.
+
+   Route::post('/csp-report', function (Request $request) {
+       Log::channel('security')->info('CSP violation', $request->json()->all());
+       return response()->noContent();
+   })->middleware('throttle:60,1')->withoutMiddleware([VerifyCsrfToken::class]);
+
+   ─────────────────────────────────────────────────────────────────────────────
+   Test:
+
+   it('sets a strict CSP with a unique nonce per request', function (): void {
+       $a = $this->get('/')->headers->get('Content-Security-Policy');
+       $b = $this->get('/')->headers->get('Content-Security-Policy');
+
+       expect($a)->not->toBe($b)                      // nonce must differ
+           ->and($a)->toContain("default-src 'self'")
+           ->and($a)->not->toContain("'unsafe-inline'")
+           ->and($a)->not->toContain("'unsafe-eval'");
+   });
+   ───────────────────────────────────────────────────────────────────────────── */

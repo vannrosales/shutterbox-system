@@ -1,0 +1,123 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+/**
+ * Table: {{ table }}
+ *
+ * Scale planning — fill this in; it is the record of WHY the schema looks like this.
+ *   Expected rows @ 1 year : ~{{ rows_1y }}
+ *   Expected rows @ 5 years: ~{{ rows_5y }}
+ *   Peak write rate        : ~{{ writes_per_sec }}/s
+ *   Retention class        : reference | core | transactional | operational | telemetry | derived
+ *   Retention policy       : {{ e.g. "archive after 3 years, never delete" }}
+ *   Primary read patterns  : {{ e.g. "WHERE tenant_id AND status ORDER BY created_at DESC" }}
+ */
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('{{ table }}', function (Blueprint $table): void {
+            // ── Keys ─────────────────────────────────────────────────────────
+            $table->id();                            // BIGINT UNSIGNED — right default
+            $table->ulid('public_id')->unique();     // opaque external id (time-ordered)
+
+            // ── Tenancy — leads EVERY composite index below ───────────────────
+            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
+
+            // ── Foreign keys — choose delete behaviour deliberately ───────────
+            $table->foreignId('customer_id')->constrained()->restrictOnDelete();
+            $table->foreignId('assigned_to')->nullable()->constrained('users')->nullOnDelete();
+
+            // ── Data — size every column to the actual data ───────────────────
+            $table->string('reference', 32);
+            $table->string('status', 32)->default('pending');     // NOT varchar(255)
+            $table->char('currency', 3)->default('PHP');
+
+            $table->unsignedBigInteger('total_minor');            // money as integer minor units
+            $table->decimal('tax_rate', 5, 4)->default(0);        // exact — never float
+            $table->unsignedSmallInteger('item_count')->default(0);
+
+            $table->json('metadata')->nullable();                 // schemaless only; not for filtering
+            $table->text('notes')->nullable();                    // off-page storage
+
+            // ── Timestamps — store UTC, always ───────────────────────────────
+            $table->timestamp('placed_at')->nullable();
+            $table->timestamps();
+
+            // Only if there is a real recovery/audit requirement.
+            $table->softDeletes();
+
+            // ── Constraints ──────────────────────────────────────────────────
+            // Uniqueness is per tenant, not global.
+            $table->unique(['tenant_id', 'reference']);
+
+            // ── Indexes ──────────────────────────────────────────────────────
+            // Order: equality → range → sort. Each one must serve a named query.
+            //
+            // Serves: WHERE tenant_id=? AND status=? ORDER BY placed_at DESC
+            $table->index(['tenant_id', 'status', 'placed_at'], '{{ table }}_tenant_status_placed_idx');
+
+            // Serves: WHERE tenant_id=? AND customer_id=?
+            $table->index(['tenant_id', 'customer_id'], '{{ table }}_tenant_customer_idx');
+
+            // Required — every soft-deleted table filters on this on EVERY query
+            $table->index('deleted_at');
+
+            // Postgres does not auto-index foreign keys; MySQL does. Explicit is
+            // correct on both (harmless duplicate on MySQL).
+            $table->index('assigned_to');
+
+            // DO NOT also add single-column indexes on tenant_id or
+            // (tenant_id, status) — the composite above already covers them.
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('{{ table }}');
+    }
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ALTERING an existing large table — different rules entirely.
+
+   ✗ NEVER on a large table:
+       $table->string('x')->after('id');        // ->after() forces a full rebuild
+       $table->string('x');                     // NOT NULL without default
+       $table->string('x')->change();           // type change = rewrite
+       $table->foreign('y')->references(...);   // validates every row under a lock
+
+   ✓ Safe pattern — expand / backfill / contract across three releases:
+
+   // Release 1: add nullable, no default, no positioning
+   Schema::table('{{ table }}', fn (Blueprint $t) => $t->string('new_col', 64)->nullable());
+
+   // Release 1 (post-deploy): backfill in a QUEUED JOB, not the migration
+   //   php artisan app:backfill-new-col
+
+   // Release 2: add the constraint once every row is populated
+   DB::statement("ALTER TABLE {{ table }} MODIFY new_col VARCHAR(64) NOT NULL DEFAULT ''");
+
+   // Release 3: drop the old column
+
+   ✓ Adding an index on PostgreSQL without locking writes:
+
+   public $withinTransaction = false;   // CONCURRENTLY cannot run in a transaction
+
+   public function up(): void
+   {
+       DB::statement('CREATE INDEX CONCURRENTLY IF NOT EXISTS {{ table }}_x_idx ON {{ table }} (x)');
+   }
+
+   ✓ Large MySQL alters — use external tooling instead of ALTER TABLE:
+
+   gh-ost --database=app --table={{ table }} --alter="ADD INDEX x_idx (x)" --execute
+   pt-online-schema-change --alter "ADD INDEX x_idx (x)" --execute D=app,t={{ table }}
+
+   See references/migrations.md for the full danger table.
+   ───────────────────────────────────────────────────────────────────────────── */

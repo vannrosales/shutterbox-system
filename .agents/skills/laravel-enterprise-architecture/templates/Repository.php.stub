@@ -1,0 +1,65 @@
+<?php
+
+declare(strict_types=1);
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  ONLY use this template if you can name a real second implementation.
+//  Wrapping Eloquent CRUD in a repository adds files and removes nothing.
+//  See references/patterns.md § "Repository — the justified case".
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── app/Contracts/{{ Name }}.php ────────────────────────────────────────────
+
+namespace App\Contracts;
+
+use App\DataTransferObjects\{{ Name }}Criteria;
+use App\Models\{{ Model }};
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
+
+interface {{ Name }}
+{
+    /** @return LengthAwarePaginator<int, {{ Model }}> */
+    public function matching({{ Name }}Criteria $criteria): LengthAwarePaginator;
+
+    /** @return Collection<int, {{ Model }}> */
+    public function recentlyActive(int $limit = 20): Collection;
+
+    // NEVER return a Builder — the caller would depend on Eloquent anyway,
+    // which defeats the entire abstraction.
+}
+
+// ─── app/Repositories/Database{{ Name }}.php ─────────────────────────────────
+
+namespace App\Repositories;
+
+use App\Contracts\{{ Name }};
+
+final class Database{{ Name }} implements {{ Name }}
+{
+    public function matching({{ Name }}Criteria $criteria): LengthAwarePaginator
+    {
+        return {{ Model }}::query()
+            ->with(['relation:id,name'])
+            ->when($criteria->search, fn ($q, $term) => $q->whereFullText('title', $term))
+            ->when($criteria->status, fn ($q, $status) => $q->where('status', $status))
+            ->orderByDesc('id')
+            ->paginate($criteria->perPage);
+    }
+
+    public function recentlyActive(int $limit = 20): Collection
+    {
+        return {{ Model }}::query()->latest('last_active_at')->limit($limit)->get();
+    }
+}
+
+// ─── app/Repositories/Search{{ Name }}.php ───────────────────────────────────
+// The second implementation that justifies the interface. If you cannot write
+// this class, delete the interface and call Eloquent directly.
+
+// ─── Binding, in a service provider ──────────────────────────────────────────
+//
+// $this->app->singleton({{ Name }}::class, fn ($app) => match (config('search.driver')) {
+//     'elastic' => $app->make(Search{{ Name }}::class),
+//     default   => $app->make(Database{{ Name }}::class),
+// });

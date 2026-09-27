@@ -1,0 +1,126 @@
+# PHPStan + Larastan configuration.
+#
+# Larastan is what makes PHPStan usable on Laravel — without it, every
+# Model::where(), facade call, and container resolution is reported as an error.
+#
+#   composer require --dev larastan/larastan
+#   vendor/bin/phpstan analyse --memory-limit=1G
+
+includes:
+    - vendor/larastan/larastan/extension.neon
+    # Uncomment once the baseline exists:
+    # - phpstan-baseline.neon
+
+    # Surfaces framework deprecations BEFORE an upgrade forces you to deal
+    # with all of them at once. Highest-value optional extension.
+    - vendor/phpstan/phpstan-deprecation-rules/rules.neon
+
+    # Adds: no loose comparison, no dynamic method calls, real booleans in
+    # conditions. Worth it on a new project; disruptive on an old one.
+    # - vendor/phpstan/phpstan-strict-rules/rules.neon
+
+parameters:
+    # 5  = minimum for an existing project (argument types)
+    # 6  = TARGET for new code (missing type hints)
+    # 8  = mature, well-typed codebase (nullable handling)
+    #
+    # Adopt incrementally: find the level that passes today, set the target one
+    # above it, and baseline the difference.
+    level: 6
+
+    paths:
+        - app
+        - config
+        - database
+        - routes
+        - tests
+
+    excludePaths:
+        analyseAndScan:
+            - app/Legacy
+            - database/migrations/2019_*
+
+    # Larastan reads your migrations to type model attributes.
+    checkModelProperties: true
+
+    # Only enable if you actually run Octane — it reports state that would leak
+    # between requests, which is noise otherwise.
+    checkOctaneCompatibility: false
+
+    checkMissingIterableValueType: true
+    checkGenericClassInNonGenericObjectType: true
+    treatPhpDocTypesAsCertain: false
+
+    # Speed: cached between runs, and parallelised.
+    tmpDir: .phpstan.cache
+    parallel:
+        maximumNumberOfProcesses: 4
+
+    ignoreErrors:
+        # EVERY entry needs a reason. An unexplained ignore becomes permanent,
+        # because the next person cannot tell whether it is still needed.
+
+        -
+            message: '#Call to an undefined method .*::[a-zA-Z]+Macro\(\)#'
+            path: app/Support/*
+            # Macros are registered at runtime in AppServiceProvider; PHPStan
+            # cannot see them.
+
+        -
+            message: '#Unsafe usage of new static#'
+            path: app/DataTransferObjects/*
+            # Named constructors on final readonly DTOs. Safe by construction.
+
+    # Report ignores that no longer match anything, so the list stays honest.
+    reportUnmatchedIgnoredErrors: true
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  Adopting incrementally on an existing codebase
+# ═══════════════════════════════════════════════════════════════════════════
+#
+#   1. Find what passes today:
+#        vendor/bin/phpstan analyse --level=0   # then 1, 2, 3...
+#
+#   2. Set `level` one above it, then baseline the rest:
+#        vendor/bin/phpstan analyse --generate-baseline
+#
+#   3. Include phpstan-baseline.neon above.
+#
+#   4. Track the baseline size in CI — it is a DEBT REGISTER, not an exemption:
+#        grep -c "message:" phpstan-baseline.neon
+#
+#      If it only ever grows, the gate is not working. Reduce it deliberately —
+#      a few entries per sprint, or as a rule whenever you touch a file.
+#
+#   New code is written at the target level from the start. The baseline covers
+#   the past, not the present.
+#
+# ═══════════════════════════════════════════════════════════════════════════
+#  In CI — annotate the diff so errors get fixed rather than scrolled past
+# ═══════════════════════════════════════════════════════════════════════════
+#
+#   - name: PHPStan
+#     run: vendor/bin/phpstan analyse --error-format=github --no-progress --memory-limit=1G
+#
+#   - uses: actions/cache@v4
+#     with:
+#       path: .phpstan.cache
+#       key: phpstan-${{ github.sha }}
+#       restore-keys: phpstan-
+#
+#   Fail the build. An analysis job that only warns is a job that is ignored.
+#
+# ═══════════════════════════════════════════════════════════════════════════
+#  What PHPStan will NOT catch
+# ═══════════════════════════════════════════════════════════════════════════
+#
+#   Wrong business logic that is correctly typed · missing authorization ·
+#   N+1 queries · race conditions · bad UX.
+#
+#   For user-input-to-dangerous-sink tracing, use Psalm's taint analysis —
+#   the only widely-available PHP tool that flags $request->input() reaching
+#   DB::raw(). See laravel-security.
+#
+#     composer require --dev vimeo/psalm psalm/plugin-laravel
+#     vendor/bin/psalm --taint-analysis
+# ═══════════════════════════════════════════════════════════════════════════

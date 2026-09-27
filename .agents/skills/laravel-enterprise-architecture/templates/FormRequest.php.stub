@@ -1,0 +1,55 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Requests;
+
+use App\Models\{{ Model }};
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+final class {{ Name }}Request extends FormRequest
+{
+    public function authorize(): bool
+    {
+        // Delegate to the Policy. Never inline authorization logic here.
+        return $this->user()->can('{{ ability }}', $this->route('{{ model }}') ?? {{ Model }}::class);
+    }
+
+    /** @return array<string, array<int, mixed>> */
+    public function rules(): array
+    {
+        return [
+            'name'  => ['required', 'string', 'max:255'],
+            'email' => [
+                'required', 'email:rfc,dns', 'max:255',
+                Rule::unique('users', 'email')->ignore($this->route('{{ model }}')),
+            ],
+            'status' => ['required', Rule::enum(\App\Enums\{{ Enum }}::class)],
+            'items'       => ['required', 'array', 'min:1', 'max:100'],
+            'items.*.id'  => ['required', 'integer', Rule::exists('items', 'id')],
+        ];
+    }
+
+    /** Normalise input before validation. Do not inject defaults that mask missing data. */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'email' => is_string($this->email) ? strtolower(trim($this->email)) : $this->email,
+        ]);
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return [
+            'items.max' => __('You may submit at most 100 items at a time.'),
+        ];
+    }
+
+    /** @return array<string, string> */
+    public function attributes(): array
+    {
+        return ['email' => __('email address')];
+    }
+}

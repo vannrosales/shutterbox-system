@@ -1,0 +1,52 @@
+<?php
+
+declare(strict_types=1);
+
+// ─── app/Events/{{ Name }}.php ───────────────────────────────────────────────
+// An event is a FACT that already happened. Past tense. Immutable.
+
+namespace App\Events;
+
+use App\Models\{{ Model }};
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+final class {{ Name }}
+{
+    use Dispatchable, SerializesModels;
+
+    public function __construct(
+        public readonly {{ Model }} ${{ model }},
+    ) {}
+}
+
+// ─── app/Listeners/{{ Consequence }}.php ─────────────────────────────────────
+// One listener = one consequence. Four consequences = four listeners.
+
+namespace App\Listeners;
+
+use App\Events\{{ Name }};
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Queue\InteractsWithQueue;
+
+final class {{ Consequence }} implements ShouldQueue
+{
+    use InteractsWithQueue;
+
+    public int $tries = 3;
+
+    public function handle({{ Name }} $event): void
+    {
+        // React. Do not make business decisions here — those belong in the action
+        // that dispatched the event.
+    }
+
+    /** Skip this listener without failing the queue job. */
+    public function shouldQueue({{ Name }} $event): bool
+    {
+        return $event->{{ model }}->notifications_enabled;
+    }
+}
+
+// Registration: Laravel 12 auto-discovers listeners by their handle() type hint.
+// Explicit registration only when you need ordering or a non-standard location.

@@ -1,0 +1,197 @@
+> Copy to `.github/workflows/quality.yml`.
+> Pint, PHPStan, and tests **fail the build**. Complexity and Rector are advisory —
+> a gate that blocks a merge on a legitimate `match` statement teaches people to
+> bypass gates.
+
+```yaml
+name: Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  style:
+    name: Code style
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - run: composer install --no-interaction --prefer-dist --no-progress
+
+      # Fail the build. A style check that warns produces two styles within a month.
+      - name: Pint
+        run: vendor/bin/pint --test
+
+  static-analysis:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('composer.lock') }}
+
+      - run: composer install --no-interaction --prefer-dist --no-progress
+
+      # PHPStan caches results — this makes subsequent runs seconds rather than minutes
+      - uses: actions/cache@v4
+        with:
+          path: .phpstan.cache
+          key: phpstan-${{ github.sha }}
+          restore-keys: phpstan-
+
+      # --error-format=github annotates the PR diff directly, so errors get fixed
+      # rather than scrolled past in a log
+      - name: PHPStan
+        run: vendor/bin/phpstan analyse --error-format=github --no-progress --memory-limit=1G
+
+      # The baseline is a DEBT REGISTER, not an exemption. If it only grows,
+      # the gate is not working.
+      - name: Baseline must not grow
+        if: github.event_name == 'pull_request'
+        run: |
+          [ -f phpstan-baseline.neon ] || exit 0
+
+          CURRENT=$(grep -c "message:" phpstan-baseline.neon || echo 0)
+
+          git fetch origin ${{ github.base_ref }} --depth=1
+          BASE=$(git show origin/${{ github.base_ref }}:phpstan-baseline.neon 2>/dev/null \
+                 | grep -c "message:" || echo 0)
+
+          echo "baseline: $BASE → $CURRENT"
+
+          if [ "$CURRENT" -gt "$BASE" ]; then
+            echo "::error::PHPStan baseline grew from $BASE to $CURRENT. Fix the new errors instead of baselining them."
+            exit 1
+          fi
+
+  rector:
+    name: Rector (advisory)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with: { php-version: '8.4', coverage: none }
+
+      - run: composer install --no-interaction --prefer-dist --no-progress
+
+      # DRY RUN ONLY. Never let CI rewrite code — an unreviewed Rector commit on
+      # main is exactly what the dry-run discipline exists to prevent.
+      - name: Rector dry run
+        run: vendor/bin/rector process --dry-run --no-progress-bar
+        continue-on-error: true      # advisory: surfaces drift without blocking
+
+  complexity:
+    name: Complexity & duplication (advisory)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with: { php-version: '8.4', coverage: none }
+
+      - run: composer install --no-interaction --prefer-dist --no-progress
+
+      # Advisory by design. These metrics prompt a look; they do not have an
+      # objective right answer, and blocking on them trains people to bypass gates.
+      - name: PHPMD
+        run: vendor/bin/phpmd app github cleancode,codesize,unusedcode,design
+        continue-on-error: true
+
+      - name: Duplication
+        run: vendor/bin/phpcpd app --min-lines=8 --min-tokens=60
+        continue-on-error: true
+
+  hygiene:
+    name: Repository hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No debug statements
+        run: |
+          if grep -rnE '\b(dd|dump|ray|var_dump|print_r)\s*\(' app/ routes/ 2>/dev/null; then
+            echo "::error::Debug statements found in committed code"
+            exit 1
+          fi
+
+      - name: No commented-out code blocks
+        run: |
+          # Heuristic: 5+ consecutive comment lines that look like PHP
+          grep -rn --include="*.php" -A4 '^\s*//\s*\(if\|foreach\|return\|\$\)' app/ \
+            && echo "::warning::Possible commented-out code" || true
+
+      - name: Overdue TODOs
+        run: |
+          grep -rnE 'TODO\([0-9]{4}-[0-9]{2}-[0-9]{2}' app/ 2>/dev/null \
+            | awk -F'[()]' -v today="$(date +%F)" '$2 < today' \
+            | tee /tmp/overdue.txt
+          [ -s /tmp/overdue.txt ] && echo "::warning::Overdue TODOs" || true
+
+      - name: composer.lock is committed
+        run: test -f composer.lock || { echo "::error::composer.lock missing"; exit 1; }
+```
+
+## Local equivalent
+
+```bash
+composer qa          # lint + stan + test — the same gates, before you push
+composer fix         # apply Pint
+```
+
+```json
+{
+    "scripts": {
+        "lint":   "pint --test",
+        "fix":    "pint",
+        "stan":   "phpstan analyse --memory-limit=1G",
+        "rector": "rector process --dry-run",
+        "test":   "pest --parallel",
+        "qa":     ["@lint", "@stan", "@test"]
+    }
+}
+```
+
+## Which gates block, and why
+
+| Gate | Blocks | Reason |
+|---|---|---|
+| Pint | **Yes** | Objective right answer; drift is unreviewable |
+| PHPStan | **Yes** | Type errors are real bugs |
+| Baseline growth | **Yes** | Otherwise the gate silently stops working |
+| Tests | **Yes** | Behaviour |
+| Debug statements | **Yes** | Embarrassing, and `dd()` in production is an outage |
+| `composer.lock` | **Yes** | Reproducibility |
+| Rector | No | Suggestions, some of which you will disagree with |
+| Complexity | No | A legitimate `match` trips the metric |
+| Duplication | No | Sometimes duplication is correct |
+| TODOs | No | Nudge, not a blocker |
+
+The rule: **block on things with an objective right answer.** Everything else is a prompt
+to look.

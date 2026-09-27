@@ -1,0 +1,214 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * ─── Migration ──────────────────────────────────────────────────────────────
+ *
+ * Schema::create('audit_logs', function (Blueprint $table): void {
+ *     $table->id();
+ *     $table->string('action', 64);                  // 'invoice.refunded', 'auth.login'
+ *
+ *     $table->nullableMorphs('subject');             // what was acted upon
+ *     $table->foreignId('causer_id')->nullable()->constrained('users')->nullOnDelete();
+ *     $table->foreignId('tenant_id')->nullable()->constrained()->cascadeOnDelete();
+ *
+ *     $table->json('context')->nullable();           // REDACTED extra detail
+ *     $table->json('changes')->nullable();           // before/after for updates
+ *
+ *     $table->ipAddress('ip_address')->nullable();
+ *     $table->string('user_agent', 512)->nullable();
+ *     $table->string('request_id', 40)->nullable();  // correlates with application logs
+ *
+ *     $table->timestamp('created_at')->useCurrent(); // append-only: no updated_at
+ *
+ *     $table->index(['tenant_id', 'created_at']);
+ *     $table->index(['causer_id', 'created_at']);
+ *     $table->index(['action', 'created_at']);
+ *     $table->index(['subject_type', 'subject_id']);
+ * });
+ *
+ * Retention: security investigations typically need 12 months. Set a prune job,
+ * and confirm the period against your legal obligations before shortening it.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\MassPrunable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Facades\Context;
+
+/**
+ * Append-only audit trail.
+ *
+ * Records WHO did WHAT to WHICH record, WHEN, and FROM WHERE. This is the
+ * evidence you need for a breach investigation, a compliance request, or a
+ * dispute — and none of it can be reconstructed after the fact.
+ */
+final class AuditLog extends Model
+{
+    use MassPrunable;
+
+    public const UPDATED_AT = null;    // append-only
+
+    protected $fillable = [
+        'action', 'subject_type', 'subject_id', 'causer_id', 'tenant_id',
+        'context', 'changes', 'ip_address', 'user_agent', 'request_id',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'context'    => 'array',
+            'changes'    => 'array',
+            'created_at' => 'immutable_datetime',
+        ];
+    }
+
+    /**
+     * Fields that must NEVER reach the audit log, in any nesting level.
+     * A log containing a password is a breach, not an audit trail.
+     */
+    private const REDACTED = [
+        'password', 'password_confirmation', 'current_password',
+        'token', 'api_token', 'access_token', 'refresh_token', 'secret',
+        'two_factor_secret', 'two_factor_recovery_codes',
+        'card_number', 'cvv', 'cvc', 'pin',
+        'tin', 'sss_number', 'philhealth_no',       // sensitive PII under RA 10173
+    ];
+
+    public static function record(
+        string $action,
+        ?Model $subject = null,
+        ?Model $causer = null,
+        array $context = [],
+        array $changes = [],
+    ): self {
+        return static::create([
+            'action'       => $action,
+            'subject_type' => $subject?->getMorphClass(),
+            'subject_id'   => $subject?->getKey(),
+            'causer_id'    => ($causer ?? auth()->user())?->getKey(),
+            'tenant_id'    => Context::get('tenant_id'),
+            'context'      => self::redact($context),
+            'changes'      => self::redact($changes),
+            'ip_address'   => request()?->ip(),
+            'user_agent'   => mb_substr((string) request()?->userAgent(), 0, 512),
+            'request_id'   => Context::get('request_id'),
+        ]);
+    }
+
+    /** Record an update with a before/after diff, automatically redacted. */
+    public static function recordChange(string $action, Model $subject, ?Model $causer = null): self
+    {
+        $changes = [];
+
+        foreach ($subject->getChanges() as $key => $new) {
+            if ($key === 'updated_at') {
+                continue;
+            }
+
+            $changes[$key] = [
+                'from' => $subject->getOriginal($key),
+                'to'   => $new,
+            ];
+        }
+
+        return self::record($action, $subject, $causer, changes: $changes);
+    }
+
+    /** @param array<string, mixed> $data */
+    private static function redact(array $data): array
+    {
+        foreach ($data as $key => $value) {
+            if (in_array(mb_strtolower((string) $key), self::REDACTED, true)) {
+                $data[$key] = '[REDACTED]';
+                continue;
+            }
+
+            if (is_array($value)) {
+                $data[$key] = self::redact($value);
+            }
+        }
+
+        return $data;
+    }
+
+    public function subject(): MorphTo
+    {
+        return $this->morphTo();
+    }
+
+    public function causer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'causer_id');
+    }
+
+    public function prunable(): Builder
+    {
+        return static::where('created_at', '<', now()->subMonths(
+            (int) config('security.audit_retention_months', 12)
+        ));
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   WHAT TO LOG — if you cannot answer "who did this?" later, log it now.
+
+   Authentication      auth.login, auth.failed, auth.logout, auth.lockout,
+                       auth.password_reset, auth.mfa_enabled, auth.mfa_disabled,
+                       auth.recovery_code_used
+   Authorization       authz.denied
+   Privilege           user.role_assigned, user.permission_granted, user.impersonated
+   Data                data.exported, data.bulk_deleted, record.deleted,
+                       sensitive_data.viewed
+   Money               payment.captured, payment.refunded, payout.created
+   Configuration       settings.changed, integration.connected, api_key.created
+   Privacy             consent.granted, consent.withdrawn, user.anonymised
+
+   WHAT NEVER TO LOG   passwords (even wrong ones — a typo is often a real password
+                       for another account), tokens, full card numbers, session ids,
+                       raw sensitive PII
+
+   ─────────────────────────────────────────────────────────────────────────────
+   Usage
+
+   AuditLog::record('invoice.refunded', $invoice, context: [
+       'amount_minor' => $amount->minorUnits,
+       'reason'       => $reason,
+   ]);
+
+   $user->update($data);
+   AuditLog::recordChange('user.updated', $user);
+
+   ─────────────────────────────────────────────────────────────────────────────
+   Wire up framework auth events in AppServiceProvider::boot()
+
+   Event::listen(Login::class,  fn ($e) => AuditLog::record('auth.login', causer: $e->user));
+   Event::listen(Logout::class, fn ($e) => AuditLog::record('auth.logout', causer: $e->user));
+   Event::listen(Lockout::class, fn () => AuditLog::record('auth.lockout'));
+   Event::listen(Failed::class, fn ($e) => AuditLog::record('auth.failed', context: [
+       'email' => $e->credentials['email'] ?? null,     // the address only, never the password
+   ]));
+
+   Gate::after(function ($user, string $ability, ?bool $result): void {
+       if ($result === false) {
+           AuditLog::record('authz.denied', causer: $user, context: ['ability' => $ability]);
+       }
+   });
+
+   ─────────────────────────────────────────────────────────────────────────────
+   Alerting — the log is only useful if something reads it
+
+   - Authorization denials spiking from one actor  → probing
+   - Bulk export volume above baseline             → exfiltration
+   - Admin actions outside business hours          → compromised account
+   - New admin created                             → privilege escalation
+   - Many auth.failed across many accounts         → credential stuffing
+
+   Schedule::command('model:prune')->daily();
+   ───────────────────────────────────────────────────────────────────────────── */

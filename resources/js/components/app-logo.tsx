@@ -1,20 +1,24 @@
-import { usePage } from '@inertiajs/react';
-
 import AppLogoIcon from '@/components/app-logo-icon';
 
 export default function AppLogo() {
-    const { name } = usePage().props;
-
     return (
-        <>
-            <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-                <AppLogoIcon className="size-5 fill-current text-white dark:text-black" />
+        <div className="flex items-center gap-2.5 py-0.5 select-none">
+            {/* White Rounded Square Box with Logo Mark */}
+            <div className="flex aspect-square size-9 items-center justify-center rounded-lg bg-white text-black p-1.5 shadow-sm shrink-0 border border-neutral-200/80">
+                <AppLogoIcon className="size-6 text-black" />
             </div>
-            <div className="ml-1 grid flex-1 text-left text-sm">
-                <span className="mb-0.5 truncate leading-tight font-semibold">
-                    {name}
+
+            {/* Stacked 2-Line Text matching Waray-Flix style */}
+            <div className="flex flex-col text-left justify-center leading-none">
+                <span className="text-sm font-black tracking-wider text-white uppercase leading-none">
+                    CREATIVE
+                </span>
+                <span className="text-xs font-black tracking-widest text-[#E50914] uppercase leading-none mt-1">
+                    SEVEN
                 </span>
             </div>
-        </>
+        </div>
     );
 }
+
+

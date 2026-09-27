@@ -46,11 +46,10 @@ const applyTheme = (appearance: Appearance): void => {
         return;
     }
 
-    const isDark = isDarkMode(appearance);
-
-    document.documentElement.classList.toggle('dark', isDark);
-    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+    document.documentElement.classList.add('dark');
+    document.documentElement.style.colorScheme = 'dark';
 };
+
 
 const subscribe = (callback: () => void) => {
     listeners.add(callback);
@@ -76,8 +75,8 @@ export function initializeTheme(): void {
     }
 
     if (!localStorage.getItem('appearance')) {
-        localStorage.setItem('appearance', 'system');
-        setCookie('appearance', 'system');
+        localStorage.setItem('appearance', 'dark');
+        setCookie('appearance', 'dark');
     }
 
     currentAppearance = getStoredAppearance();
@@ -86,6 +85,7 @@ export function initializeTheme(): void {
     // Set up system theme change listener
     mediaQuery()?.addEventListener('change', handleSystemThemeChange);
 }
+
 
 export function useAppearance(): UseAppearanceReturn {
     const appearance: Appearance = useSyncExternalStore(

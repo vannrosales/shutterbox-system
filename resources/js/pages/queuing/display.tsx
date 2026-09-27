@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import AppLayout from '@/layouts/app-layout';
 import { 
     Clock, 
     FastForward, 

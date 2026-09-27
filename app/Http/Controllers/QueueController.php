@@ -30,7 +30,7 @@ class QueueController extends Controller
                 WHEN 'completed' THEN 4 
                 WHEN 'cancelled' THEN 5 
                 ELSE 6 END")
-            ->orderBy('id', 'desc')
+            ->orderBy('id', 'asc')
             ->get();
 
         $templates = Template::where('is_active', true)->get();

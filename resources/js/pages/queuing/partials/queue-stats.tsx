@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 
 interface TodayStats {
     total_queue: number;
@@ -13,41 +13,25 @@ interface Props {
 
 export function QueueStats({ todayStats }: Props) {
     return (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-                <CardHeader className="p-4 pb-1">
-                    <CardTitle className="text-xs font-medium text-muted-foreground">Today's Queue Entries</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-1">
-                    <div className="text-2xl font-bold">{todayStats.total_queue}</div>
-                </CardContent>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Card className="py-2.5 px-3.5 flex flex-row items-center justify-between border-neutral-800 bg-neutral-900/70 shadow-none rounded-xl">
+                <span className="text-xs font-medium text-neutral-400 truncate">Today's Entries</span>
+                <span className="text-base font-bold font-mono text-white ml-2">{todayStats.total_queue}</span>
             </Card>
 
-            <Card>
-                <CardHeader className="p-4 pb-1">
-                    <CardTitle className="text-xs font-medium text-muted-foreground">Now Waiting</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-1">
-                    <div className="text-2xl font-bold text-blue-600">{todayStats.waiting_now}</div>
-                </CardContent>
+            <Card className="py-2.5 px-3.5 flex flex-row items-center justify-between border-neutral-800 bg-neutral-900/70 shadow-none rounded-xl">
+                <span className="text-xs font-medium text-neutral-400 truncate">Now Waiting</span>
+                <span className="text-base font-bold font-mono text-blue-400 ml-2">{todayStats.waiting_now}</span>
             </Card>
 
-            <Card>
-                <CardHeader className="p-4 pb-1">
-                    <CardTitle className="text-xs font-medium text-muted-foreground">Currently In Booth</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-1">
-                    <div className="text-2xl font-bold text-amber-600">{todayStats.in_booth_now}</div>
-                </CardContent>
+            <Card className="py-2.5 px-3.5 flex flex-row items-center justify-between border-neutral-800 bg-neutral-900/70 shadow-none rounded-xl">
+                <span className="text-xs font-medium text-neutral-400 truncate">Currently In Booth</span>
+                <span className="text-base font-bold font-mono text-amber-400 ml-2">{todayStats.in_booth_now}</span>
             </Card>
 
-            <Card>
-                <CardHeader className="p-4 pb-1">
-                    <CardTitle className="text-xs font-medium text-muted-foreground">Completed Today</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-1">
-                    <div className="text-2xl font-bold text-emerald-600">{todayStats.completed_today}</div>
-                </CardContent>
+            <Card className="py-2.5 px-3.5 flex flex-row items-center justify-between border-neutral-800 bg-neutral-900/70 shadow-none rounded-xl">
+                <span className="text-xs font-medium text-neutral-400 truncate">Completed Today</span>
+                <span className="text-base font-bold font-mono text-emerald-400 ml-2">{todayStats.completed_today}</span>
             </Card>
         </div>
     );

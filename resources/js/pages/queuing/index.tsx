@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
+import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
-import { Filter, Ticket } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Filter, MapPin, Ticket } from 'lucide-react';
 import type { BreadcrumbItem } from '@/types';
 import { QueueStats } from './partials/queue-stats';
 import { QueueCard } from './partials/queue-card';
@@ -65,6 +67,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function QueuingIndex({ sessions, templates, boothLocations, todayStats }: Props) {
+    const [selectedBoothId, setSelectedBoothId] = useState<string>(
+        boothLocations.length > 0 ? String(boothLocations[0].id) : ''
+    );
     const [editingSession, setEditingSession] = useState<QueueSession | null>(null);
     const [receiptSession, setReceiptSession] = useState<QueueSession | null>(null);
     const [statusFilter, setStatusFilter] = useState<string>('active');
@@ -93,7 +98,42 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
         <>
             <Head title="Queuing POS - ShutterBox" />
 
-            <div className="flex flex-col gap-6 p-4 md:p-6">
+            <div className="flex flex-col gap-4 p-4 md:p-6">
+                {/* Header with Active Booth Location/Event Selector */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-neutral-900 border border-neutral-800 p-5 sm:p-6 rounded-2xl relative overflow-hidden shadow-sm">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-[#E50914]/10 rounded-full blur-3xl pointer-events-none" />
+                    <div className="z-10">
+                        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2 text-white">
+                            <Ticket className="size-6 text-[#E50914]" /> Photostrip Session Queuing POS
+                        </h1>
+                        <p className="text-sm text-neutral-400 mt-1">
+                            Process walk-in photo booth sessions, select templates, and calculate extra copies.
+                        </p>
+                    </div>
+
+                    {/* Active Booth Event Selector */}
+                    <div className="z-10 flex items-center gap-3 bg-neutral-950 border border-neutral-800 p-3 rounded-xl shadow-inner min-w-[240px]">
+                        <div className="p-2 rounded-lg bg-[#E50914]/10 text-[#E50914]">
+                            <MapPin className="size-5" />
+                        </div>
+                        <div className="flex flex-col flex-1 min-w-0">
+                            <span className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider">Active Event Booth</span>
+                            <Select value={selectedBoothId} onValueChange={setSelectedBoothId}>
+                                <SelectTrigger className="h-7 text-xs font-bold bg-transparent border-none p-0 focus:ring-0 text-white truncate shadow-none">
+                                    <SelectValue placeholder="Select Event Booth" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-neutral-900 border-neutral-800 text-white">
+                                    {boothLocations.map((loc) => (
+                                        <SelectItem key={loc.id} value={String(loc.id)}>
+                                            {loc.name} ({loc.city})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Edit Queue Ticket Dialog */}
                 <EditQueueModal
                     session={editingSession}
@@ -118,6 +158,7 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                     {/* Left Column: Inline Create Queue Form */}
                     <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-6">
                         <CreateQueueForm
+                            selectedBoothLocationId={selectedBoothId}
                             templates={templates}
                             boothLocations={boothLocations}
                             formatCurrency={formatCurrency}
@@ -179,3 +220,5 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
         </>
     );
 }
+
+QueuingIndex.layout = (page: React.ReactNode) => <AppLayout breadcrumbs={breadcrumbs}>{page}</AppLayout>;

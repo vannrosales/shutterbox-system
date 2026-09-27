@@ -1,4 +1,4 @@
-import { FormEvent } from 'react';
+import { FormEvent, useEffect } from 'react';
 import { useForm } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,19 +23,21 @@ interface BoothLocation {
 }
 
 interface Props {
+    selectedBoothLocationId: string;
     templates: Template[];
     boothLocations: BoothLocation[];
     formatCurrency: (amount: number) => string;
 }
 
 export function CreateQueueForm({
+    selectedBoothLocationId,
     templates,
     boothLocations,
     formatCurrency,
 }: Props) {
     const { data, setData, post, processing, errors, reset } = useForm({
         customer_name: '',
-        booth_location_id: boothLocations.length > 0 ? String(boothLocations[0].id) : '',
+        booth_location_id: selectedBoothLocationId,
         sessions_count: 1,
         template_ids: [] as number[],
         extra_copies: 0,
@@ -43,6 +45,10 @@ export function CreateQueueForm({
         payment_status: 'paid',
         notes: '',
     });
+
+    useEffect(() => {
+        setData('booth_location_id', selectedBoothLocationId);
+    }, [selectedBoothLocationId]);
 
     const basePhotostrips = data.sessions_count * 2;
     const extraPhotostrips = data.extra_copies * 2;
@@ -80,6 +86,7 @@ export function CreateQueueForm({
         post('/queuing', {
             onSuccess: () => {
                 reset();
+                setData('booth_location_id', selectedBoothLocationId);
             },
         });
     };
@@ -97,41 +104,18 @@ export function CreateQueueForm({
 
             <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Customer Name & Location */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                            <Label htmlFor="customer_name" className="text-xs font-medium text-neutral-300">
-                                Customer Name
-                            </Label>
-                            <Input
-                                id="customer_name"
-                                placeholder="Guest / Group name"
-                                value={data.customer_name}
-                                onChange={(e) => setData('customer_name', e.target.value)}
-                                className="h-9 text-xs bg-neutral-900 border-neutral-800 focus:border-[#E50914] text-white"
-                            />
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <Label htmlFor="booth_location" className="text-xs font-medium text-neutral-300">
-                                Booth Location
-                            </Label>
-                            <Select
-                                value={String(data.booth_location_id)}
-                                onValueChange={(val) => setData('booth_location_id', val)}
-                            >
-                                <SelectTrigger id="booth_location" className="h-9 text-xs bg-neutral-900 border-neutral-800 text-white">
-                                    <SelectValue placeholder="Select Location" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-neutral-900 border-neutral-800 text-white">
-                                    {boothLocations.map((loc) => (
-                                        <SelectItem key={loc.id} value={String(loc.id)}>
-                                            {loc.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                    {/* Customer Name */}
+                    <div className="space-y-1.5">
+                        <Label htmlFor="customer_name" className="text-xs font-medium text-neutral-300">
+                            Customer Name
+                        </Label>
+                        <Input
+                            id="customer_name"
+                            placeholder="Guest / Group name"
+                            value={data.customer_name}
+                            onChange={(e) => setData('customer_name', e.target.value)}
+                            className="h-9 text-xs bg-neutral-900 border-neutral-800 focus:border-[#E50914] text-white"
+                        />
                     </div>
 
                     {/* Sessions Dropdown */}

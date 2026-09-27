@@ -98,28 +98,28 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
         <>
             <Head title="Queuing POS - ShutterBox" />
 
-            <div className="flex flex-col gap-4 p-4 md:p-6">
+            <div className="flex flex-col gap-3.5 p-3 sm:p-4 lg:p-5 max-w-[1700px] mx-auto w-full">
                 {/* Header with Active Booth Location/Event Selector */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-neutral-900 border border-neutral-800 p-5 sm:p-6 rounded-2xl relative overflow-hidden shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-900 border border-neutral-800 p-4 sm:p-5 rounded-xl relative overflow-hidden shadow-sm">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-[#E50914]/10 rounded-full blur-3xl pointer-events-none" />
                     <div className="z-10">
-                        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2 text-white">
-                            <Ticket className="size-6 text-[#E50914]" /> Photostrip Session Queuing POS
+                        <h1 className="text-xl lg:text-2xl font-bold tracking-tight flex items-center gap-2 text-white">
+                            <Ticket className="size-5 lg:size-6 text-[#E50914]" /> Photostrip Session Queuing POS
                         </h1>
-                        <p className="text-sm text-neutral-400 mt-1">
+                        <p className="text-xs lg:text-sm text-neutral-400 mt-0.5">
                             Process walk-in photo booth sessions, select templates, and calculate extra copies.
                         </p>
                     </div>
 
                     {/* Active Booth Event Selector */}
-                    <div className="z-10 flex items-center gap-3 bg-neutral-950 border border-neutral-800 p-3 rounded-xl shadow-inner min-w-[240px]">
-                        <div className="p-2 rounded-lg bg-[#E50914]/10 text-[#E50914]">
-                            <MapPin className="size-5" />
+                    <div className="z-10 flex items-center gap-2.5 bg-neutral-950 border border-neutral-800 p-2.5 px-3 rounded-xl shadow-inner min-w-[240px]">
+                        <div className="p-1.5 rounded-lg bg-[#E50914]/10 text-[#E50914]">
+                            <MapPin className="size-4" />
                         </div>
                         <div className="flex flex-col flex-1 min-w-0">
                             <span className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider">Active Event Booth</span>
                             <Select value={selectedBoothId} onValueChange={setSelectedBoothId}>
-                                <SelectTrigger className="h-7 text-xs font-bold bg-transparent border-none p-0 focus:ring-0 text-white truncate shadow-none">
+                                <SelectTrigger className="h-6 text-xs font-bold bg-transparent border-none p-0 focus:ring-0 text-white truncate shadow-none">
                                     <SelectValue placeholder="Select Event Booth" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-neutral-900 border-neutral-800 text-white">
@@ -153,10 +153,10 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                 {/* KPI Summary Banner */}
                 <QueueStats todayStats={todayStats} />
 
-                {/* Main POS Split Layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* Main POS Split Layout Optimized for Laptop Displays */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 xl:gap-5 items-start">
                     {/* Left Column: Inline Create Queue Form */}
-                    <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-6">
+                    <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
                         <CreateQueueForm
                             selectedBoothLocationId={selectedBoothId}
                             templates={templates}
@@ -166,12 +166,12 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                     </div>
 
                     {/* Right Column: Active Queue List & Controls */}
-                    <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-4">
+                    <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-3.5">
                         {/* Queue Filter Bar */}
-                        <div className="flex items-center justify-between gap-4 bg-card border border-neutral-800 rounded-xl p-3 flex-wrap">
+                        <div className="flex items-center justify-between gap-3 bg-card border border-neutral-800 rounded-xl p-2.5 px-3 flex-wrap">
                             <div className="flex items-center gap-2 flex-wrap">
-                                <Filter className="size-4 text-muted-foreground" />
-                                <span className="text-sm font-medium">Filter Queue:</span>
+                                <Filter className="size-3.5 text-muted-foreground" />
+                                <span className="text-xs font-medium">Filter Queue:</span>
                                 <div className="flex gap-1 flex-wrap">
                                     {['active', 'waiting', 'in_booth', 'completed', 'all'].map((st) => (
                                         <Button
@@ -179,7 +179,7 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                                             variant={statusFilter === st ? 'default' : 'ghost'}
                                             size="sm"
                                             onClick={() => setStatusFilter(st)}
-                                            className={`capitalize text-xs h-8 ${statusFilter === st ? 'bg-[#E50914] text-white hover:bg-[#c10712]' : ''}`}
+                                            className={`capitalize text-xs h-7 px-2.5 ${statusFilter === st ? 'bg-[#E50914] text-white hover:bg-[#c10712]' : ''}`}
                                         >
                                             {st.replace('_', ' ')}
                                         </Button>
@@ -192,13 +192,13 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                             </span>
                         </div>
 
-                        {/* Live Queue Cards Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Live Queue Cards Grid (Optimized grid columns for laptop viewports) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-3.5">
                             {filteredSessions.length === 0 ? (
-                                <div className="col-span-full py-12 text-center border border-dashed border-neutral-800 rounded-xl bg-neutral-900/30">
-                                    <Ticket className="size-10 text-muted-foreground mx-auto mb-2" />
-                                    <h3 className="font-semibold text-base text-neutral-200">No Queue Entries Found</h3>
-                                    <p className="text-sm text-neutral-400">Fill out the form on the left to add a customer to the queue.</p>
+                                <div className="col-span-full py-10 text-center border border-dashed border-neutral-800 rounded-xl bg-neutral-900/30">
+                                    <Ticket className="size-8 text-muted-foreground mx-auto mb-2" />
+                                    <h3 className="font-semibold text-sm text-neutral-200">No Queue Entries Found</h3>
+                                    <p className="text-xs text-neutral-400">Fill out the form on the left to add a customer to the queue.</p>
                                 </div>
                             ) : (
                                 filteredSessions.map((session) => (

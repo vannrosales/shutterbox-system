@@ -92,20 +92,20 @@ export function CreateQueueForm({
     };
 
     return (
-        <Card className="border-neutral-800 bg-neutral-950 text-white shadow-xl py-5">
-            <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg font-bold tracking-tight text-white">
-                    <Sparkles className="size-5 text-[#E50914]" /> Create Queue Ticket
+        <Card className="border-neutral-800 bg-neutral-950 text-white shadow-xl py-4">
+            <CardHeader className="pb-3 px-4">
+                <CardTitle className="flex items-center gap-2 text-base lg:text-lg font-bold tracking-tight text-white">
+                    <Sparkles className="size-4.5 text-[#E50914]" /> Create Queue Ticket
                 </CardTitle>
                 <CardDescription className="text-xs text-neutral-400">
                     Process walk-in session, select template, and calculate price.
                 </CardDescription>
             </CardHeader>
 
-            <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
+            <CardContent className="px-4">
+                <form onSubmit={handleSubmit} className="space-y-3 text-xs">
                     {/* Customer Name */}
-                    <div className="space-y-1.5">
+                    <div className="space-y-1">
                         <Label htmlFor="customer_name" className="text-xs font-medium text-neutral-300">
                             Customer Name
                         </Label>
@@ -114,12 +114,12 @@ export function CreateQueueForm({
                             placeholder="Guest / Group name"
                             value={data.customer_name}
                             onChange={(e) => setData('customer_name', e.target.value)}
-                            className="h-9 text-xs bg-neutral-900 border-neutral-800 focus:border-[#E50914] text-white"
+                            className="h-8.5 text-xs bg-neutral-900 border-neutral-800 focus:border-[#E50914] text-white"
                         />
                     </div>
 
                     {/* Sessions Dropdown */}
-                    <div className="space-y-1.5">
+                    <div className="space-y-1">
                         <div className="flex justify-between items-center">
                             <Label htmlFor="sessions_count" className="text-xs font-medium text-neutral-300">
                                 Sessions
@@ -132,7 +132,7 @@ export function CreateQueueForm({
                             value={String(data.sessions_count)}
                             onValueChange={handleSessionsCountChange}
                         >
-                            <SelectTrigger id="sessions_count" className="h-9 text-xs bg-neutral-900 border-neutral-800 text-white">
+                            <SelectTrigger id="sessions_count" className="h-8.5 text-xs bg-neutral-900 border-neutral-800 text-white">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="bg-neutral-900 border-neutral-800 text-white">
@@ -149,7 +149,7 @@ export function CreateQueueForm({
                     </div>
 
                     {/* Templates Selection */}
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
                             <Label className="text-xs font-medium text-neutral-300">
                                 Select Templates
@@ -162,14 +162,14 @@ export function CreateQueueForm({
                         {templates.length === 0 ? (
                             <p className="text-xs text-neutral-400">No active templates found.</p>
                         ) : (
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1">
                                 {templates.map((tpl) => {
                                     const isChecked = data.template_ids.includes(tpl.id);
                                     return (
                                         <div
                                             key={tpl.id}
                                             onClick={() => handleTemplateToggle(tpl.id)}
-                                            className={`flex items-center space-x-2.5 p-2.5 rounded-lg border cursor-pointer transition-all ${
+                                            className={`flex items-center space-x-2 p-2 rounded-lg border cursor-pointer transition-all ${
                                                 isChecked ? 'border-[#E50914] bg-[#E50914]/10' : 'border-neutral-800 bg-neutral-900/60 hover:border-neutral-700'
                                             }`}
                                         >
@@ -201,7 +201,7 @@ export function CreateQueueForm({
                     </div>
 
                     {/* Extra Copies */}
-                    <div className="space-y-1.5">
+                    <div className="space-y-1">
                         <div className="flex justify-between items-center">
                             <Label htmlFor="extra_copies" className="text-xs font-medium text-neutral-300">
                                 Extra Copies <span className="text-neutral-500 font-normal">(Optional)</span>
@@ -214,7 +214,7 @@ export function CreateQueueForm({
                             value={String(data.extra_copies)}
                             onValueChange={(val) => setData('extra_copies', parseInt(val, 10))}
                         >
-                            <SelectTrigger id="extra_copies" className="h-9 text-xs bg-neutral-900 border-neutral-800 text-white">
+                            <SelectTrigger id="extra_copies" className="h-8.5 text-xs bg-neutral-900 border-neutral-800 text-white">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="bg-neutral-900 border-neutral-800 text-white">
@@ -232,8 +232,8 @@ export function CreateQueueForm({
                     </div>
 
                     {/* Payment Method & Status */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
+                    <div className="grid grid-cols-2 gap-2.5">
+                        <div className="space-y-1">
                             <Label htmlFor="payment_method" className="text-xs font-medium text-neutral-300">
                                 Payment Method
                             </Label>
@@ -241,7 +241,7 @@ export function CreateQueueForm({
                                 value={data.payment_method}
                                 onValueChange={(val) => setData('payment_method', val)}
                             >
-                                <SelectTrigger id="payment_method" className="h-9 text-xs bg-neutral-900 border-neutral-800 text-white">
+                                <SelectTrigger id="payment_method" className="h-8.5 text-xs bg-neutral-900 border-neutral-800 text-white">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="bg-neutral-900 border-neutral-800 text-white">
@@ -253,7 +253,7 @@ export function CreateQueueForm({
                             </Select>
                         </div>
 
-                        <div className="space-y-1.5">
+                        <div className="space-y-1">
                             <Label htmlFor="payment_status" className="text-xs font-medium text-neutral-300">
                                 Payment Status
                             </Label>
@@ -261,7 +261,7 @@ export function CreateQueueForm({
                                 value={data.payment_status}
                                 onValueChange={(val) => setData('payment_status', val)}
                             >
-                                <SelectTrigger id="payment_status" className="h-9 text-xs bg-neutral-900 border-neutral-800 text-white">
+                                <SelectTrigger id="payment_status" className="h-8.5 text-xs bg-neutral-900 border-neutral-800 text-white">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="bg-neutral-900 border-neutral-800 text-white">
@@ -273,7 +273,7 @@ export function CreateQueueForm({
                     </div>
 
                     {/* Order Summary Box */}
-                    <div className="rounded-xl bg-neutral-900/80 border border-neutral-800 p-3.5 space-y-1.5 text-xs">
+                    <div className="rounded-lg bg-neutral-900/80 border border-neutral-800 p-3 space-y-1 text-xs">
                         <div className="flex justify-between text-neutral-400">
                             <span>Sessions ({data.sessions_count}):</span>
                             <span className="font-mono text-neutral-200">{formatCurrency(basePrice)}</span>
@@ -288,18 +288,18 @@ export function CreateQueueForm({
                             <span>Total Photostrips:</span>
                             <span className="font-mono text-neutral-200">{totalPhotostrips} strips</span>
                         </div>
-                        <div className="pt-2 border-t border-neutral-800 flex justify-between items-center">
+                        <div className="pt-1.5 border-t border-neutral-800 flex justify-between items-center">
                             <span className="font-semibold text-neutral-200">Total Price</span>
-                            <span className="text-xl font-extrabold text-[#E50914] font-mono">{formatCurrency(totalPrice)}</span>
+                            <span className="text-lg font-extrabold text-[#E50914] font-mono">{formatCurrency(totalPrice)}</span>
                         </div>
                     </div>
 
                     <Button
                         type="submit"
                         disabled={processing || data.template_ids.length === 0}
-                        className="w-full h-10 text-xs bg-[#E50914] text-white font-semibold hover:bg-[#c10712] shadow-md transition-colors"
+                        className="w-full h-9 text-xs bg-[#E50914] text-white font-semibold hover:bg-[#c10712] shadow-md transition-colors"
                     >
-                        <Ticket className="mr-2 size-4" /> Issue Queue Ticket
+                        <Ticket className="mr-2 size-3.5" /> Issue Queue Ticket
                     </Button>
                 </form>
             </CardContent>

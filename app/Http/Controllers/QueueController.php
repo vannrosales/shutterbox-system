@@ -24,11 +24,12 @@ class QueueController extends Controller
     {
         $sessions = QueueSession::with(['templates', 'boothLocation'])
             ->orderByRaw("CASE status 
-                WHEN 'waiting' THEN 1 
-                WHEN 'in_booth' THEN 2 
-                WHEN 'completed' THEN 3 
-                WHEN 'cancelled' THEN 4 
-                ELSE 5 END")
+                WHEN 'in_booth' THEN 1 
+                WHEN 'waiting' THEN 2 
+                WHEN 'skipped' THEN 3 
+                WHEN 'completed' THEN 4 
+                WHEN 'cancelled' THEN 5 
+                ELSE 6 END")
             ->orderBy('id', 'desc')
             ->get();
 
@@ -47,6 +48,23 @@ class QueueController extends Controller
             'templates' => $templates,
             'boothLocations' => $boothLocations,
             'todayStats' => $todayStats,
+        ]);
+    }
+
+    public function display(): Response
+    {
+        $sessions = QueueSession::with(['templates', 'boothLocation'])
+            ->whereDate('created_at', Carbon::today())
+            ->whereIn('status', ['waiting', 'in_booth', 'completed', 'skipped'])
+            ->orderByRaw("CASE status WHEN 'in_booth' THEN 1 WHEN 'waiting' THEN 2 WHEN 'skipped' THEN 3 ELSE 4 END")
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $activeBooth = BoothLocation::where('status', 'active')->first();
+
+        return Inertia::render('queuing/display', [
+            'sessions' => $sessions,
+            'activeBooth' => $activeBooth,
         ]);
     }
 
@@ -69,7 +87,7 @@ class QueueController extends Controller
     public function updateStatus(Request $request, QueueSession $queueSession): RedirectResponse
     {
         $validated = $request->validate([
-            'status' => ['required', 'string', 'in:waiting,in_booth,completed,cancelled'],
+            'status' => ['required', 'string', 'in:waiting,in_booth,completed,cancelled,skipped'],
         ]);
 
         $queueSession->update([

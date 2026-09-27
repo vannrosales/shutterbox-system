@@ -3,7 +3,7 @@ import { Head, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Filter, MapPin, Ticket } from 'lucide-react';
+import { ExternalLink, Filter, MapPin, Monitor, Ticket } from 'lucide-react';
 import type { BreadcrumbItem } from '@/types';
 import { QueueStats } from './partials/queue-stats';
 import { QueueCard } from './partials/queue-card';
@@ -99,7 +99,7 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
             <Head title="Queuing POS - ShutterBox" />
 
             <div className="flex flex-col gap-3.5 p-3 sm:p-4 lg:p-5 max-w-[1700px] mx-auto w-full">
-                {/* Header with Active Booth Location/Event Selector */}
+                {/* Header with Active Booth Location/Event Selector & Monitor Link */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-900 border border-neutral-800 p-4 sm:p-5 rounded-xl relative overflow-hidden shadow-sm">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-[#E50914]/10 rounded-full blur-3xl pointer-events-none" />
                     <div className="z-10">
@@ -111,25 +111,38 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                         </p>
                     </div>
 
-                    {/* Active Booth Event Selector */}
-                    <div className="z-10 flex items-center gap-2.5 bg-neutral-950 border border-neutral-800 p-2.5 px-3 rounded-xl shadow-inner min-w-[240px]">
-                        <div className="p-1.5 rounded-lg bg-[#E50914]/10 text-[#E50914]">
-                            <MapPin className="size-4" />
-                        </div>
-                        <div className="flex flex-col flex-1 min-w-0">
-                            <span className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider">Active Event Booth</span>
-                            <Select value={selectedBoothId} onValueChange={setSelectedBoothId}>
-                                <SelectTrigger className="h-6 text-xs font-bold bg-transparent border-none p-0 focus:ring-0 text-white truncate shadow-none">
-                                    <SelectValue placeholder="Select Event Booth" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-neutral-900 border-neutral-800 text-white">
-                                    {boothLocations.map((loc) => (
-                                        <SelectItem key={loc.id} value={String(loc.id)}>
-                                            {loc.name} ({loc.city})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                    <div className="z-10 flex flex-wrap items-center gap-2.5">
+                        {/* Secondary Monitor Display Shortcut */}
+                        <a
+                            href="/queuing/display"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-neutral-800 bg-neutral-950 text-xs font-semibold text-neutral-200 hover:text-white hover:border-[#E50914]/50 transition-colors shadow-inner"
+                        >
+                            <Monitor className="size-4 text-[#E50914]" /> Open Monitor Display
+                            <ExternalLink className="size-3 text-neutral-500" />
+                        </a>
+
+                        {/* Active Booth Event Selector */}
+                        <div className="flex items-center gap-2.5 bg-neutral-950 border border-neutral-800 p-2.5 px-3 rounded-xl shadow-inner min-w-[220px]">
+                            <div className="p-1.5 rounded-lg bg-[#E50914]/10 text-[#E50914]">
+                                <MapPin className="size-4" />
+                            </div>
+                            <div className="flex flex-col flex-1 min-w-0">
+                                <span className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider">Active Event Booth</span>
+                                <Select value={selectedBoothId} onValueChange={setSelectedBoothId}>
+                                    <SelectTrigger className="h-6 text-xs font-bold bg-transparent border-none p-0 focus:ring-0 text-white truncate shadow-none">
+                                        <SelectValue placeholder="Select Event Booth" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-neutral-900 border-neutral-800 text-white">
+                                        {boothLocations.map((loc) => (
+                                            <SelectItem key={loc.id} value={String(loc.id)}>
+                                                {loc.name} ({loc.city})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -173,7 +186,7 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                                 <Filter className="size-3.5 text-muted-foreground" />
                                 <span className="text-xs font-medium">Filter Queue:</span>
                                 <div className="flex gap-1 flex-wrap">
-                                    {['active', 'waiting', 'in_booth', 'completed', 'all'].map((st) => (
+                                    {['active', 'waiting', 'in_booth', 'skipped', 'completed', 'all'].map((st) => (
                                         <Button
                                             key={st}
                                             variant={statusFilter === st ? 'default' : 'ghost'}
@@ -192,7 +205,7 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                             </span>
                         </div>
 
-                        {/* Live Queue Cards Grid (Optimized grid columns for laptop viewports) */}
+                        {/* Live Queue Cards Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-3.5">
                             {filteredSessions.length === 0 ? (
                                 <div className="col-span-full py-10 text-center border border-dashed border-neutral-800 rounded-xl bg-neutral-900/30">

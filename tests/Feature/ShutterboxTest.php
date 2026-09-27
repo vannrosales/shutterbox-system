@@ -48,6 +48,7 @@ class ShutterboxTest extends TestCase
 
         $this->assertDatabaseHas('queue_sessions', [
             'customer_name' => 'John Doe',
+            'queue_number' => '001',
             'sessions_count' => 2,
             'photostrips_base_count' => 4,
             'extra_copies' => 2,
@@ -119,7 +120,7 @@ class ShutterboxTest extends TestCase
         $t2 = Template::create(['name' => '4 Shots - Black', 'code' => 'T2', 'category' => 'Black', 'is_active' => true]);
 
         $session = QueueSession::create([
-            'queue_number' => 'SB-001',
+            'queue_number' => '001',
             'customer_name' => 'Alice',
             'sessions_count' => 1,
             'photostrips_base_count' => 2,
@@ -167,9 +168,9 @@ class ShutterboxTest extends TestCase
         $user = User::factory()->create();
         $t1 = Template::create(['name' => '3 Shots - Black', 'code' => 'T1', 'category' => 'Black', 'is_active' => true]);
 
-        // Create completed session SB-001
+        // Create completed session 001
         $completedSession = QueueSession::create([
-            'queue_number' => 'SB-001',
+            'queue_number' => '001',
             'customer_name' => 'First Customer',
             'sessions_count' => 1,
             'photostrips_base_count' => 2,
@@ -186,7 +187,7 @@ class ShutterboxTest extends TestCase
 
         $this->actingAs($user);
 
-        // When a new customer arrives, since active queue is empty, next number should recycle back to SB-001
+        // When a new customer arrives, since active queue is empty, next number should recycle back to 001
         $response = $this->post(route('queuing.store'), [
             'customer_name' => 'Next Customer',
             'sessions_count' => 1,
@@ -200,7 +201,7 @@ class ShutterboxTest extends TestCase
 
         $this->assertDatabaseHas('queue_sessions', [
             'customer_name' => 'Next Customer',
-            'queue_number' => 'SB-001',
+            'queue_number' => '001',
             'status' => 'waiting',
         ]);
     }

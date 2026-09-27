@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Calendar, DollarSign, LayoutGrid, LayoutTemplate, Ticket } from 'lucide-react';
+import { Calendar, DollarSign, LayoutGrid, LayoutTemplate, MapPin, Ticket } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -34,6 +34,11 @@ const mainNavGroups: NavGroup[] = [
                 title: 'Queuing POS',
                 href: '/queuing',
                 icon: Ticket,
+            },
+            {
+                title: 'Events & Booths',
+                href: '/events',
+                icon: MapPin,
             },
             {
                 title: 'Calendar & Bookings',

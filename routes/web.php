@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EventController;
 use App\Http\Controllers\FinancialController;
 use App\Http\Controllers\QueueController;
 use App\Http\Controllers\TemplateController;
@@ -18,12 +19,20 @@ Route::get('/', function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
-    // Queuing POS
+    // Queuing POS & Display
     Route::get('/queuing', [QueueController::class, 'index'])->name('queuing.index');
+    Route::get('/queuing/display', [QueueController::class, 'display'])->name('queuing.display');
     Route::post('/queuing', [QueueController::class, 'store'])->name('queuing.store');
     Route::put('/queuing/{queueSession}', [QueueController::class, 'update'])->name('queuing.update');
     Route::patch('/queuing/{queueSession}/status', [QueueController::class, 'updateStatus'])->name('queuing.update-status');
     Route::delete('/queuing/{queueSession}', [QueueController::class, 'destroy'])->name('queuing.destroy');
+
+    // Events & Booth Locations Management
+    Route::get('/events', [EventController::class, 'index'])->name('events.index');
+    Route::post('/events', [EventController::class, 'store'])->name('events.store');
+    Route::put('/events/{boothLocation}', [EventController::class, 'update'])->name('events.update');
+    Route::patch('/events/{boothLocation}/toggle', [EventController::class, 'toggleStatus'])->name('events.toggle');
+    Route::delete('/events/{boothLocation}', [EventController::class, 'destroy'])->name('events.destroy');
 
     // Calendar & Booth Locations / Bookings
     Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar.index');

@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Pencil, Printer, Trash2, UserCheck } from 'lucide-react';
+import { CheckCircle2, FastForward, Pencil, Printer, Trash2 } from 'lucide-react';
 
 interface Template {
     id: number;
@@ -66,11 +66,11 @@ export function QueueCard({
                     </span>
                     <Badge className={
                         session.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                        session.status === 'in_booth' ? 'bg-[#E50914]/10 text-[#E50914] border-[#E50914]/20' :
+                        session.status === 'skipped' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
                         session.status === 'cancelled' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                        'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                        'bg-[#E50914]/10 text-[#E50914] border-[#E50914]/20'
                     }>
-                        {session.status.replace('_', ' ').toUpperCase()}
+                        {session.status === 'waiting' ? 'WAITING QUEUE' : session.status.replace('_', ' ').toUpperCase()}
                     </Badge>
                 </div>
 
@@ -143,19 +143,9 @@ export function QueueCard({
             </CardContent>
 
             {/* Action Bar */}
-            <div className="p-3 border-t border-neutral-800 bg-neutral-900/40 flex items-center justify-between gap-2">
-                <div className="flex gap-1">
-                    {session.status === 'waiting' && (
-                        <Button
-                            size="sm"
-                            className="bg-[#E50914] hover:bg-[#c10712] text-white font-semibold text-xs h-8"
-                            onClick={() => onStatusUpdate(session.id, 'in_booth')}
-                        >
-                            <UserCheck className="mr-1 size-3.5" /> Call to Booth
-                        </Button>
-                    )}
-
-                    {session.status === 'in_booth' && (
+            <div className="p-3 border-t border-neutral-800 bg-neutral-900/40 flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex gap-1.5 flex-wrap">
+                    {(session.status === 'waiting' || session.status === 'skipped') && (
                         <Button
                             size="sm"
                             className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs h-8"
@@ -164,12 +154,24 @@ export function QueueCard({
                             <CheckCircle2 className="mr-1 size-3.5" /> Mark Completed
                         </Button>
                     )}
+
+                    {(session.status === 'waiting') && (
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 font-medium text-xs h-8"
+                            onClick={() => onStatusUpdate(session.id, 'skipped')}
+                            title="Client left or unresponsive - skip to next queue entry"
+                        >
+                            <FastForward className="mr-1 size-3.5" /> Skip
+                        </Button>
+                    )}
                 </div>
 
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="size-8 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                    className="size-8 text-red-400 hover:bg-red-500/10 hover:text-red-300 ml-auto"
                     onClick={() => onDelete(session.id)}
                 >
                     <Trash2 className="size-4" />

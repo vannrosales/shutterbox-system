@@ -11,7 +11,7 @@ final class CreateQueueSessionAction
 {
     public function handle(QueueSessionData $data): QueueSession
     {
-        $activeNumbers = QueueSession::whereIn('status', ['waiting', 'in_booth'])
+        $activeNumbers = QueueSession::whereIn('status', ['waiting', 'in_booth', 'skipped'])
             ->pluck('queue_number')
             ->map(function (string $num): int {
                 if (preg_match('/(\d+)/', $num, $matches)) {
@@ -28,7 +28,7 @@ final class CreateQueueSessionAction
             $nextNum++;
         }
 
-        $queueNumber = 'SB-'.str_pad((string) $nextNum, 3, '0', STR_PAD_LEFT);
+        $queueNumber = str_pad((string) $nextNum, 3, '0', STR_PAD_LEFT);
 
         $queueSession = QueueSession::create([
             'queue_number' => $queueNumber,

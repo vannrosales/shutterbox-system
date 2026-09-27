@@ -1,6 +1,6 @@
 use std::process::{Child, Command};
 use std::sync::Mutex;
-use tauri::State;
+use tauri::Manager;
 
 struct ServerProcess(Mutex<Option<Child>>);
 

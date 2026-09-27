@@ -150,26 +150,27 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
 
             <div className="flex flex-col gap-6 p-4 md:p-6">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-neutral-900 border border-neutral-800 p-6 rounded-2xl relative overflow-hidden shadow-sm">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-[#E50914]/10 rounded-full blur-3xl pointer-events-none" />
+                    <div className="z-10">
                         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                            <Ticket className="size-6 text-amber-500" /> Photostrip Session Queuing POS
+                            <Ticket className="size-6 text-[#E50914]" /> Photostrip Session Queuing POS
                         </h1>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-sm text-neutral-400 mt-1">
                             Process walk-in photo booth sessions, select templates, and calculate extra copies.
                         </p>
                     </div>
 
                     <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                         <DialogTrigger asChild>
-                            <Button className="bg-amber-500 hover:bg-amber-600 text-neutral-950 font-semibold shadow-md">
+                            <Button className="bg-[#E50914] hover:bg-[#c10712] text-white font-semibold shadow-md z-10">
                                 <Plus className="mr-2 size-4" /> New Queue Session
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                                 <DialogTitle className="flex items-center gap-2 text-xl">
-                                    <Sparkles className="size-5 text-amber-500" /> Create Queue Ticket
+                                    <Sparkles className="size-5 text-[#E50914]" /> Create Queue Ticket
                                 </DialogTitle>
                                 <DialogDescription>
                                     Default: 1 session = 2 photostrips (₱100). Additional copy = 2 photostrips (₱100 per copy).
@@ -215,7 +216,7 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                                         <Label htmlFor="sessions_count" className="font-semibold text-sm">
                                             Dropdown : Sessions
                                         </Label>
-                                        <span className="text-xs font-mono text-amber-600 dark:text-amber-400">
+                                        <span className="text-xs font-mono text-[#E50914]">
                                             1 Session = 2 Photostrips (₱100)
                                         </span>
                                     </div>
@@ -238,7 +239,7 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                                         </SelectContent>
                                     </Select>
                                     {data.sessions_count >= 2 && (
-                                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                        <p className="text-xs text-[#E50914] font-medium">
                                             ✓ {data.sessions_count} sessions selected: You can select 1 or more templates below!
                                         </p>
                                     )}
@@ -266,7 +267,7 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                                                         key={tpl.id}
                                                         onClick={() => handleTemplateToggle(tpl.id)}
                                                         className={`flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                                                            isChecked ? 'border-amber-500 bg-amber-500/10 shadow-sm' : 'border-border hover:bg-accent'
+                                                            isChecked ? 'border-[#E50914] bg-[#E50914]/10 shadow-sm' : 'border-border hover:bg-accent'
                                                         }`}
                                                     >
                                                         <Checkbox
@@ -301,7 +302,7 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                                         <Label htmlFor="extra_copies" className="font-semibold text-sm">
                                             Dropdown : Copies (optional)
                                         </Label>
-                                        <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                                        <span className="text-xs text-[#E50914] font-medium">
                                             +₱100 per extra copy (2 photostrips)
                                         </span>
                                     </div>
@@ -364,7 +365,7 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                                 </div>
 
                                 {/* Order Calculation Summary Box */}
-                                <div className="rounded-xl bg-neutral-900 text-white p-4 space-y-2">
+                                <div className="rounded-xl bg-neutral-900 border border-neutral-800 text-white p-4 space-y-2">
                                     <div className="text-xs uppercase tracking-wider text-neutral-400 font-semibold">
                                         Pricing & Photostrip Summary
                                     </div>
@@ -377,17 +378,17 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                                         <span className="font-mono">{basePhotostrips} strips</span>
                                     </div>
                                     {data.extra_copies > 0 && (
-                                        <div className="flex justify-between text-sm text-emerald-400">
+                                        <div className="flex justify-between text-sm text-[#E50914]">
                                             <span>Extra Copies ({data.extra_copies} × ₱100):</span>
                                             <span className="font-mono">+{formatCurrency(extraCopiesPrice)} ({extraPhotostrips} strips)</span>
                                         </div>
                                     )}
-                                    <div className="pt-2 border-t border-neutral-700 flex justify-between items-baseline">
+                                    <div className="pt-2 border-t border-neutral-800 flex justify-between items-baseline">
                                         <div>
                                             <span className="text-sm font-semibold">Total Price:</span>
                                             <span className="text-xs text-neutral-400 block">{totalPhotostrips} total photostrips to print</span>
                                         </div>
-                                        <span className="text-2xl font-bold text-amber-400 font-mono">{formatCurrency(totalPrice)}</span>
+                                        <span className="text-2xl font-bold text-[#E50914] font-mono">{formatCurrency(totalPrice)}</span>
                                     </div>
                                 </div>
 
@@ -402,7 +403,7 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                                     <Button
                                         type="submit"
                                         disabled={processing || data.template_ids.length === 0}
-                                        className="bg-amber-500 text-neutral-950 font-semibold hover:bg-amber-600"
+                                        className="bg-[#E50914] text-white font-semibold hover:bg-[#c10712]"
                                     >
                                         Generate Queue Ticket
                                     </Button>
@@ -463,7 +464,7 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                                     variant={statusFilter === st ? 'default' : 'ghost'}
                                     size="sm"
                                     onClick={() => setStatusFilter(st)}
-                                    className="capitalize text-xs h-8"
+                                    className={`capitalize text-xs h-8 ${statusFilter === st ? 'bg-[#E50914] text-white hover:bg-[#c10712]' : ''}`}
                                 >
                                     {st.replace('_', ' ')}
                                 </Button>
@@ -479,25 +480,25 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                 {/* Live Queue Cards / List */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredSessions.length === 0 ? (
-                        <div className="col-span-full py-12 text-center border border-dashed rounded-xl">
+                        <div className="col-span-full py-12 text-center border border-dashed border-neutral-800 rounded-xl">
                             <Ticket className="size-10 text-muted-foreground mx-auto mb-2" />
                             <h3 className="font-semibold text-base">No Queue Entries Found</h3>
                             <p className="text-sm text-muted-foreground">Click 'New Queue Session' above to add customer to queue.</p>
                         </div>
                     ) : (
                         filteredSessions.map((session) => (
-                            <Card key={session.id} className="relative overflow-hidden flex flex-col justify-between border shadow-sm">
+                            <Card key={session.id} className="relative overflow-hidden flex flex-col justify-between border border-neutral-800 shadow-sm">
                                 {/* Top Ticket Ribbon */}
-                                <div className="p-4 border-b bg-muted/40 flex items-center justify-between">
+                                <div className="p-4 border-b border-neutral-800 bg-neutral-900/60 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <span className="font-mono text-base font-bold bg-neutral-900 text-amber-400 px-3 py-1 rounded-md">
+                                        <span className="font-mono text-base font-bold bg-neutral-950 text-[#E50914] border border-[#E50914]/30 px-3 py-1 rounded-md">
                                             {session.queue_number}
                                         </span>
                                         <Badge className={
-                                            session.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200' :
-                                            session.status === 'in_booth' ? 'bg-amber-500/10 text-amber-600 border-amber-200' :
-                                            session.status === 'cancelled' ? 'bg-red-500/10 text-red-600 border-red-200' :
-                                            'bg-blue-500/10 text-blue-600 border-blue-200'
+                                            session.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                            session.status === 'in_booth' ? 'bg-[#E50914]/10 text-[#E50914] border-[#E50914]/20' :
+                                            session.status === 'cancelled' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                                            'bg-blue-500/10 text-blue-500 border-blue-500/20'
                                         }>
                                             {session.status.replace('_', ' ').toUpperCase()}
                                         </Badge>
@@ -528,7 +529,7 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                                         </div>
                                         <div>
                                             <span className="text-muted-foreground block">Photostrips:</span>
-                                            <span className="font-semibold text-amber-600 dark:text-amber-400">
+                                            <span className="font-semibold text-[#E50914]">
                                                 {session.total_photostrips} strips total
                                             </span>
                                         </div>
@@ -565,7 +566,7 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                                         {session.status === 'waiting' && (
                                             <Button
                                                 size="sm"
-                                                className="bg-amber-500 hover:bg-amber-600 text-neutral-950 font-semibold text-xs h-8"
+                                                className="bg-[#E50914] hover:bg-[#c10712] text-white font-semibold text-xs h-8"
                                                 onClick={() => handleStatusUpdate(session.id, 'in_booth')}
                                             >
                                                 <UserCheck className="mr-1 size-3.5" /> Call to Booth

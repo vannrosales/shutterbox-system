@@ -132,31 +132,32 @@ export default function FinancialsIndex({
 
             <div className="flex flex-col gap-6 p-4 md:p-6">
                 {/* Header Banner */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-neutral-900 border border-neutral-800 p-6 rounded-2xl relative overflow-hidden shadow-sm">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-[#E50914]/10 rounded-full blur-3xl pointer-events-none" />
+                    <div className="z-10">
                         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                            <DollarSign className="size-6 text-emerald-500" /> Daily Gross Sales & Financial Tracker
+                            <DollarSign className="size-6 text-[#E50914]" /> Daily Gross Sales & Financial Tracker
                         </h1>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-sm text-neutral-400 mt-1">
                             Monitor daily sales, payment breakdown, expenses, and net profit revenue.
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 bg-card border rounded-lg p-1.5 shadow-sm">
-                            <Label htmlFor="filter-date" className="text-xs font-semibold px-1">Date:</Label>
+                    <div className="flex items-center gap-3 z-10">
+                        <div className="flex items-center gap-2 bg-neutral-950 border border-neutral-800 rounded-lg p-1.5 shadow-sm">
+                            <Label htmlFor="filter-date" className="text-xs font-semibold px-1 text-neutral-300">Date:</Label>
                             <Input
                                 id="filter-date"
                                 type="date"
                                 value={dateInput}
                                 onChange={(e) => handleDateFilterChange(e.target.value)}
-                                className="h-8 text-xs font-mono w-36"
+                                className="h-8 text-xs font-mono w-36 bg-neutral-900 border-neutral-700"
                             />
                         </div>
 
                         <Dialog open={isExpenseModalOpen} onOpenChange={setIsExpenseModalOpen}>
                             <DialogTrigger asChild>
-                                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+                                <Button className="bg-[#E50914] hover:bg-[#c10712] text-white font-semibold">
                                     <Plus className="mr-2 size-4" /> Record Expense
                                 </Button>
                             </DialogTrigger>
@@ -240,7 +241,7 @@ export default function FinancialsIndex({
 
                                     <DialogFooter>
                                         <Button type="button" variant="outline" onClick={() => setIsExpenseModalOpen(false)}>Cancel</Button>
-                                        <Button type="submit" disabled={expenseForm.processing} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                                        <Button type="submit" disabled={expenseForm.processing} className="bg-[#E50914] hover:bg-[#c10712] text-white">
                                             Save Expense
                                         </Button>
                                     </DialogFooter>
@@ -252,64 +253,64 @@ export default function FinancialsIndex({
 
                 {/* Daily Gross Sales KPI Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Card className="border-l-4 border-l-emerald-500 shadow-sm">
+                    <Card className="border-l-4 border-l-[#E50914] border border-neutral-800 bg-neutral-900 shadow-sm">
                         <CardHeader className="pb-1">
-                            <CardTitle className="text-xs text-muted-foreground font-semibold">
+                            <CardTitle className="text-xs text-neutral-400 font-semibold">
                                 Daily Gross Sales ({selectedDate})
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-3xl font-extrabold text-emerald-600 font-mono">
+                            <div className="text-3xl font-extrabold text-[#E50914] font-mono">
                                 {formatCurrency(dailyStats.gross_sales)}
                             </div>
-                            <div className="text-xs text-muted-foreground mt-1 flex justify-between">
+                            <div className="text-xs text-neutral-400 mt-1 flex justify-between">
                                 <span>POS: {formatCurrency(dailyStats.queue_sales)}</span>
                                 <span>Bookings: {formatCurrency(dailyStats.booking_sales)}</span>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="border-l-4 border-l-amber-500 shadow-sm">
+                    <Card className="border-l-4 border-l-amber-500 border border-neutral-800 bg-neutral-900 shadow-sm">
                         <CardHeader className="pb-1">
-                            <CardTitle className="text-xs text-muted-foreground font-semibold">
+                            <CardTitle className="text-xs text-neutral-400 font-semibold">
                                 Daily Sessions & Volume
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">
-                                {dailyStats.sessions_count} <span className="text-sm font-normal text-muted-foreground">sessions</span>
+                                {dailyStats.sessions_count} <span className="text-sm font-normal text-neutral-400">sessions</span>
                             </div>
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="text-xs text-neutral-400 mt-1">
                                 {dailyStats.photostrips_count} photostrips printed ({dailyStats.extra_copies_count} extra copies)
                             </p>
                         </CardContent>
                     </Card>
 
-                    <Card className="border-l-4 border-l-blue-500 shadow-sm">
+                    <Card className="border-l-4 border-l-blue-500 border border-neutral-800 bg-neutral-900 shadow-sm">
                         <CardHeader className="pb-1">
-                            <CardTitle className="text-xs text-muted-foreground font-semibold">
+                            <CardTitle className="text-xs text-neutral-400 font-semibold">
                                 Monthly Gross Sales
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(monthlyStats.gross_sales)}</div>
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="text-xs text-neutral-400 mt-1">
                                 Accumulated sales this calendar month
                             </p>
                         </CardContent>
                     </Card>
 
-                    <Card className="border-l-4 border-l-purple-500 shadow-sm">
+                    <Card className="border-l-4 border-l-emerald-500 border border-neutral-800 bg-neutral-900 shadow-sm">
                         <CardHeader className="pb-1">
-                            <CardTitle className="text-xs text-muted-foreground font-semibold">
+                            <CardTitle className="text-xs text-neutral-400 font-semibold">
                                 Monthly Net Income
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className={`text-2xl font-bold ${monthlyStats.net_income >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                            <div className={`text-2xl font-bold ${monthlyStats.net_income >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                                 {formatCurrency(monthlyStats.net_income)}
                             </div>
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="text-xs text-neutral-400 mt-1">
                                 Revenue minus {formatCurrency(monthlyStats.expenses)} expenses
                             </p>
                         </CardContent>
@@ -327,90 +328,90 @@ export default function FinancialsIndex({
                     <TabsContent value="sales" className="mt-4 space-y-6">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {/* Payment Method Split */}
-                            <Card>
+                            <Card className="border border-neutral-800 bg-neutral-900">
                                 <CardHeader>
                                     <CardTitle className="text-base font-bold flex items-center gap-2">
-                                        <Wallet className="size-4 text-emerald-600" /> Payment Methods Breakdown
+                                        <Wallet className="size-4 text-[#E50914]" /> Payment Methods Breakdown
                                     </CardTitle>
-                                    <CardDescription>Daily revenue split by payment channel</CardDescription>
+                                    <CardDescription className="text-neutral-400">Daily revenue split by payment channel</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    <div className="flex justify-between items-center p-3 rounded-lg border bg-card">
+                                    <div className="flex justify-between items-center p-3 rounded-lg border border-neutral-800 bg-neutral-950">
                                         <div className="flex items-center gap-3">
-                                            <div className="size-9 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold text-xs">
+                                            <div className="size-9 rounded-lg bg-[#E50914]/10 text-[#E50914] flex items-center justify-center font-bold text-xs border border-[#E50914]/20">
                                                 CASH
                                             </div>
                                             <div>
                                                 <h4 className="font-semibold text-sm">Cash Payments</h4>
-                                                <p className="text-xs text-muted-foreground">Booth cash register</p>
+                                                <p className="text-xs text-neutral-400">Booth cash register</p>
                                             </div>
                                         </div>
-                                        <span className="font-mono font-bold text-sm">{formatCurrency(dailyStats.payment_methods.cash)}</span>
+                                        <span className="font-mono font-bold text-sm text-[#E50914]">{formatCurrency(dailyStats.payment_methods.cash)}</span>
                                     </div>
 
-                                    <div className="flex justify-between items-center p-3 rounded-lg border bg-card">
+                                    <div className="flex justify-between items-center p-3 rounded-lg border border-neutral-800 bg-neutral-950">
                                         <div className="flex items-center gap-3">
-                                            <div className="size-9 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold text-xs">
+                                            <div className="size-9 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold text-xs border border-blue-500/20">
                                                 GCASH
                                             </div>
                                             <div>
                                                 <h4 className="font-semibold text-sm">GCash QR</h4>
-                                                <p className="text-xs text-muted-foreground">E-wallet mobile payment</p>
+                                                <p className="text-xs text-neutral-400">E-wallet mobile payment</p>
                                             </div>
                                         </div>
-                                        <span className="font-mono font-bold text-sm">{formatCurrency(dailyStats.payment_methods.gcash)}</span>
+                                        <span className="font-mono font-bold text-sm text-neutral-200">{formatCurrency(dailyStats.payment_methods.gcash)}</span>
                                     </div>
 
-                                    <div className="flex justify-between items-center p-3 rounded-lg border bg-card">
+                                    <div className="flex justify-between items-center p-3 rounded-lg border border-neutral-800 bg-neutral-950">
                                         <div className="flex items-center gap-3">
-                                            <div className="size-9 rounded-lg bg-teal-500/10 text-teal-600 flex items-center justify-center font-bold text-xs">
+                                            <div className="size-9 rounded-lg bg-teal-500/10 text-teal-400 flex items-center justify-center font-bold text-xs border border-teal-500/20">
                                                 MAYA
                                             </div>
                                             <div>
                                                 <h4 className="font-semibold text-sm">Maya QR</h4>
-                                                <p className="text-xs text-muted-foreground">Digital Wallet</p>
+                                                <p className="text-xs text-neutral-400">Digital Wallet</p>
                                             </div>
                                         </div>
-                                        <span className="font-mono font-bold text-sm">{formatCurrency(dailyStats.payment_methods.maya)}</span>
+                                        <span className="font-mono font-bold text-sm text-neutral-200">{formatCurrency(dailyStats.payment_methods.maya)}</span>
                                     </div>
 
-                                    <div className="flex justify-between items-center p-3 rounded-lg border bg-card">
+                                    <div className="flex justify-between items-center p-3 rounded-lg border border-neutral-800 bg-neutral-950">
                                         <div className="flex items-center gap-3">
-                                            <div className="size-9 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center font-bold text-xs">
+                                            <div className="size-9 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center font-bold text-xs border border-purple-500/20">
                                                 CARD
                                             </div>
                                             <div>
                                                 <h4 className="font-semibold text-sm">Credit / Debit Card</h4>
-                                                <p className="text-xs text-muted-foreground">POS Terminal</p>
+                                                <p className="text-xs text-neutral-400">POS Terminal</p>
                                             </div>
                                         </div>
-                                        <span className="font-mono font-bold text-sm">{formatCurrency(dailyStats.payment_methods.card)}</span>
+                                        <span className="font-mono font-bold text-sm text-neutral-200">{formatCurrency(dailyStats.payment_methods.card)}</span>
                                     </div>
                                 </CardContent>
                             </Card>
 
                             {/* Recent Queue Transactions on Date */}
-                            <Card>
+                            <Card className="border border-neutral-800 bg-neutral-900">
                                 <CardHeader>
                                     <CardTitle className="text-base font-bold flex items-center gap-2">
-                                        <Receipt className="size-4 text-amber-500" /> Daily POS Transactions Log
+                                        <Receipt className="size-4 text-[#E50914]" /> Daily POS Transactions Log
                                     </CardTitle>
-                                    <CardDescription>Sales entries logged on {selectedDate}</CardDescription>
+                                    <CardDescription className="text-neutral-400">Sales entries logged on {selectedDate}</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     {recentQueueTransactions.length === 0 ? (
-                                        <p className="text-sm text-muted-foreground py-6 text-center">No POS transactions for this date.</p>
+                                        <p className="text-sm text-neutral-400 py-6 text-center">No POS transactions for this date.</p>
                                     ) : (
-                                        <div className="divide-y divide-border">
+                                        <div className="divide-y divide-neutral-800">
                                             {recentQueueTransactions.map((tx) => (
                                                 <div key={tx.id} className="py-2.5 flex items-center justify-between text-xs">
                                                     <div>
-                                                        <span className="font-mono font-bold text-amber-600 mr-2">{tx.queue_number}</span>
+                                                        <span className="font-mono font-bold text-[#E50914] mr-2">{tx.queue_number}</span>
                                                         <span className="font-semibold">{tx.customer_name}</span>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        <Badge variant="outline" className="uppercase text-[10px]">{tx.payment_method}</Badge>
-                                                        <span className="font-bold text-emerald-600 font-mono">{formatCurrency(tx.total_price)}</span>
+                                                        <Badge variant="outline" className="uppercase text-[10px] border-neutral-700 text-neutral-300">{tx.payment_method}</Badge>
+                                                        <span className="font-bold text-[#E50914] font-mono">{formatCurrency(tx.total_price)}</span>
                                                     </div>
                                                 </div>
                                             ))}
@@ -423,20 +424,20 @@ export default function FinancialsIndex({
 
                     {/* Tab 2: Expenses Tracker */}
                     <TabsContent value="expenses" className="mt-4">
-                        <Card>
+                        <Card className="border border-neutral-800 bg-neutral-900">
                             <CardHeader className="flex flex-row items-center justify-between">
                                 <div>
                                     <CardTitle className="text-base font-bold">Recorded Operating Expenses</CardTitle>
-                                    <CardDescription>Paper rolls, ink cartridges, booth rent, and staff allowances</CardDescription>
+                                    <CardDescription className="text-neutral-400">Paper rolls, ink cartridges, booth rent, and staff allowances</CardDescription>
                                 </div>
                             </CardHeader>
                             <CardContent>
                                 {expenses.length === 0 ? (
-                                    <p className="text-sm text-muted-foreground py-8 text-center">No expenses recorded yet.</p>
+                                    <p className="text-sm text-neutral-400 py-8 text-center">No expenses recorded yet.</p>
                                 ) : (
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-xs text-left">
-                                            <thead className="border-b bg-muted/40 font-semibold text-muted-foreground">
+                                            <thead className="border-b border-neutral-800 bg-neutral-950 font-semibold text-neutral-400">
                                                 <tr>
                                                     <th className="p-3">Date</th>
                                                     <th className="p-3">Category</th>
@@ -446,23 +447,23 @@ export default function FinancialsIndex({
                                                     <th className="p-3 text-center">Actions</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-border">
+                                            <tbody className="divide-y divide-neutral-800">
                                                 {expenses.map((exp) => (
-                                                    <tr key={exp.id} className="hover:bg-accent/30">
+                                                    <tr key={exp.id} className="hover:bg-neutral-800/40">
                                                         <td className="p-3 font-mono">{exp.expense_date}</td>
                                                         <td className="p-3">
-                                                            <Badge variant="outline">{exp.category}</Badge>
+                                                            <Badge variant="outline" className="border-neutral-700 text-neutral-300">{exp.category}</Badge>
                                                         </td>
                                                         <td className="p-3 font-medium">{exp.description}</td>
-                                                        <td className="p-3 font-mono text-muted-foreground">{exp.receipt_number || '-'}</td>
-                                                        <td className="p-3 text-right font-bold text-red-600 font-mono">
+                                                        <td className="p-3 font-mono text-neutral-400">{exp.receipt_number || '-'}</td>
+                                                        <td className="p-3 text-right font-bold text-red-500 font-mono">
                                                             {formatCurrency(exp.amount)}
                                                         </td>
                                                         <td className="p-3 text-center">
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                className="text-destructive h-7 text-xs"
+                                                                className="text-destructive h-7 text-xs hover:bg-destructive/10"
                                                                 onClick={() => handleDeleteExpense(exp.id)}
                                                             >
                                                                 Delete

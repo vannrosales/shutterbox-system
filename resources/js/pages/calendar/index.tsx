@@ -186,21 +186,22 @@ export default function CalendarIndex({ boothLocations, bookings, templates }: P
 
             <div className="flex flex-col gap-6 p-4 md:p-6">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-neutral-900 border border-neutral-800 p-6 rounded-2xl relative overflow-hidden shadow-sm">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-[#E50914]/10 rounded-full blur-3xl pointer-events-none" />
+                    <div className="z-10">
                         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                            <CalendarIcon className="size-6 text-blue-500" /> Booth Events & Bookings Calendar
+                            <CalendarIcon className="size-6 text-[#E50914]" /> Booth Events & Bookings Calendar
                         </h1>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-sm text-neutral-400 mt-1">
                             Schedule photo booth event locations and manage client event bookings.
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 z-10">
                         <Dialog open={isBoothModalOpen} onOpenChange={setIsBoothModalOpen}>
                             <DialogTrigger asChild>
-                                <Button variant="outline" className="border-blue-500/50 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                                    <MapPin className="mr-2 size-4" /> Add Event Location
+                                <Button variant="outline" className="border-[#E50914]/40 hover:bg-[#E50914]/10 text-white">
+                                    <MapPin className="mr-2 size-4 text-[#E50914]" /> Add Event Location
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="max-w-lg">
@@ -286,7 +287,7 @@ export default function CalendarIndex({ boothLocations, bookings, templates }: P
 
                                     <DialogFooter>
                                         <Button type="button" variant="outline" onClick={() => setIsBoothModalOpen(false)}>Cancel</Button>
-                                        <Button type="submit" disabled={boothForm.processing} className="bg-blue-600 hover:bg-blue-700">
+                                        <Button type="submit" disabled={boothForm.processing} className="bg-[#E50914] hover:bg-[#c10712] text-white">
                                             Save Event Location
                                         </Button>
                                     </DialogFooter>
@@ -296,7 +297,7 @@ export default function CalendarIndex({ boothLocations, bookings, templates }: P
 
                         <Dialog open={isBookingModalOpen} onOpenChange={setIsBookingModalOpen}>
                             <DialogTrigger asChild>
-                                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+                                <Button className="bg-[#E50914] hover:bg-[#c10712] text-white font-semibold">
                                     <Plus className="mr-2 size-4" /> Add Booking
                                 </Button>
                             </DialogTrigger>
@@ -433,14 +434,14 @@ export default function CalendarIndex({ boothLocations, bookings, templates }: P
                                     </div>
 
                                     {/* Price Preview */}
-                                    <div className="rounded-lg bg-neutral-900 text-white p-3 flex justify-between items-center text-sm font-mono">
+                                    <div className="rounded-lg bg-neutral-900 border border-neutral-800 text-white p-3 flex justify-between items-center text-sm font-mono">
                                         <span>Total Booking Amount:</span>
-                                        <span className="text-lg font-bold text-emerald-400">{formatCurrency(bookingTotalPrice)}</span>
+                                        <span className="text-lg font-bold text-[#E50914]">{formatCurrency(bookingTotalPrice)}</span>
                                     </div>
 
                                     <DialogFooter>
                                         <Button type="button" variant="outline" onClick={() => setIsBookingModalOpen(false)}>Cancel</Button>
-                                        <Button type="submit" disabled={bookingForm.processing} className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+                                        <Button type="submit" disabled={bookingForm.processing} className="bg-[#E50914] hover:bg-[#c10712] text-white font-semibold">
                                             Confirm Booking
                                         </Button>
                                     </DialogFooter>
@@ -460,7 +461,7 @@ export default function CalendarIndex({ boothLocations, bookings, templates }: P
 
                     {/* Tab 1: Calendar Grid */}
                     <TabsContent value="calendar" className="mt-4 space-y-4">
-                        <Card>
+                        <Card className="border border-neutral-800 bg-neutral-900">
                             <CardHeader className="flex flex-row items-center justify-between pb-4">
                                 <CardTitle className="text-lg font-bold">{monthName}</CardTitle>
                                 <div className="flex items-center gap-2">
@@ -477,7 +478,7 @@ export default function CalendarIndex({ boothLocations, bookings, templates }: P
                             </CardHeader>
                             <CardContent>
                                 {/* Calendar Days Header */}
-                                <div className="grid grid-cols-7 gap-1 text-center font-semibold text-xs text-muted-foreground py-2 border-b">
+                                <div className="grid grid-cols-7 gap-1 text-center font-semibold text-xs text-neutral-400 py-2 border-b border-neutral-800">
                                     <div>Sun</div>
                                     <div>Mon</div>
                                     <div>Tue</div>
@@ -491,7 +492,7 @@ export default function CalendarIndex({ boothLocations, bookings, templates }: P
                                 <div className="grid grid-cols-7 gap-1.5 pt-2">
                                     {monthDays.map((day, idx) => {
                                         if (day === null) {
-                                            return <div key={`empty-${idx}`} className="h-28 rounded-lg bg-muted/20" />;
+                                            return <div key={`empty-${idx}`} className="h-28 rounded-lg bg-neutral-950/40" />;
                                         }
 
                                         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -510,14 +511,14 @@ export default function CalendarIndex({ boothLocations, bookings, templates }: P
                                             <div
                                                 key={`day-${day}`}
                                                 onClick={() => setSelectedDayEvents({ date: dateStr, booths: dayBooths, bookings: dayBookings })}
-                                                className={`h-28 p-2 rounded-lg border flex flex-col justify-between cursor-pointer transition-all hover:border-blue-500 ${
-                                                    hasEvents ? 'bg-card shadow-sm' : 'bg-muted/10'
+                                                className={`h-28 p-2 rounded-lg border border-neutral-800 flex flex-col justify-between cursor-pointer transition-all hover:border-[#E50914] ${
+                                                    hasEvents ? 'bg-neutral-950 shadow-sm' : 'bg-neutral-900/40'
                                                 }`}
                                             >
                                                 <div className="flex justify-between items-center">
                                                     <span className="text-xs font-bold font-mono">{day}</span>
                                                     {dayBookings.length > 0 && (
-                                                        <Badge variant="secondary" className="text-[9px] px-1 py-0 bg-emerald-500/10 text-emerald-600">
+                                                        <Badge variant="secondary" className="text-[9px] px-1 py-0 bg-[#E50914]/15 text-[#E50914] border border-[#E50914]/30">
                                                             {dayBookings.length} booking
                                                         </Badge>
                                                     )}
@@ -525,12 +526,12 @@ export default function CalendarIndex({ boothLocations, bookings, templates }: P
 
                                                 <div className="space-y-1 overflow-y-auto text-[10px]">
                                                     {dayBooths.map((b) => (
-                                                        <div key={b.id} className="p-1 rounded bg-blue-500/10 text-blue-700 dark:text-blue-300 font-semibold truncate">
+                                                        <div key={b.id} className="p-1 rounded bg-[#E50914]/10 text-[#E50914] font-semibold truncate border border-[#E50914]/20">
                                                             <MapPin className="inline size-2.5 mr-0.5" /> {b.name}
                                                         </div>
                                                     ))}
                                                     {dayBookings.map((bk) => (
-                                                        <div key={bk.id} className="p-1 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold truncate">
+                                                        <div key={bk.id} className="p-1 rounded bg-amber-500/10 text-amber-400 font-semibold truncate border border-amber-500/20">
                                                             📅 {bk.event_name}
                                                         </div>
                                                     ))}
@@ -547,28 +548,28 @@ export default function CalendarIndex({ boothLocations, bookings, templates }: P
                     <TabsContent value="booths" className="mt-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {boothLocations.map((loc) => (
-                                <Card key={loc.id}>
+                                <Card key={loc.id} className="border border-neutral-800 bg-neutral-900">
                                     <CardHeader className="p-4 pb-2">
                                         <div className="flex justify-between items-start">
                                             <CardTitle className="text-base font-bold">{loc.name}</CardTitle>
-                                            <Badge className={loc.status === 'active' ? 'bg-emerald-600' : 'bg-neutral-600'}>
+                                            <Badge className={loc.status === 'active' ? 'bg-[#E50914] text-white' : 'bg-neutral-800 text-neutral-400'}>
                                                 {loc.status}
                                             </Badge>
                                         </div>
-                                        <CardDescription className="text-xs flex items-center gap-1 mt-1">
-                                            <MapPin className="size-3 text-muted-foreground" /> {loc.address}, {loc.city}
+                                        <CardDescription className="text-xs flex items-center gap-1 mt-1 text-neutral-400">
+                                            <MapPin className="size-3 text-neutral-500" /> {loc.address}, {loc.city}
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent className="p-4 pt-2 space-y-2 text-xs">
-                                        <div className="flex justify-between text-muted-foreground">
+                                        <div className="flex justify-between text-neutral-400">
                                             <span>Active Duration:</span>
-                                            <span className="font-semibold text-foreground">
+                                            <span className="font-semibold text-neutral-200">
                                                 {loc.start_date.split('T')[0]} to {loc.end_date.split('T')[0]}
                                             </span>
                                         </div>
-                                        {loc.notes && <p className="text-muted-foreground italic">{loc.notes}</p>}
+                                        {loc.notes && <p className="text-neutral-400 italic">{loc.notes}</p>}
                                         <div className="pt-2 flex justify-end">
-                                            <Button variant="ghost" size="sm" className="text-destructive h-7 text-xs" onClick={() => handleDeleteBooth(loc.id)}>
+                                            <Button variant="ghost" size="sm" className="text-destructive h-7 text-xs hover:bg-destructive/10" onClick={() => handleDeleteBooth(loc.id)}>
                                                 <Trash2 className="mr-1 size-3" /> Remove
                                             </Button>
                                         </div>
@@ -582,34 +583,34 @@ export default function CalendarIndex({ boothLocations, bookings, templates }: P
                     <TabsContent value="bookings" className="mt-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {bookings.map((bk) => (
-                                <Card key={bk.id}>
+                                <Card key={bk.id} className="border border-neutral-800 bg-neutral-900">
                                     <CardHeader className="p-4 pb-2">
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                <Badge variant="outline" className="text-[10px] font-mono mb-1">{bk.booking_number}</Badge>
+                                                <Badge variant="outline" className="text-[10px] font-mono mb-1 border-neutral-700 text-neutral-300">{bk.booking_number}</Badge>
                                                 <CardTitle className="text-base font-bold">{bk.event_name}</CardTitle>
                                             </div>
-                                            <Badge className="bg-emerald-600">{bk.status}</Badge>
+                                            <Badge className="bg-[#E50914] text-white">{bk.status}</Badge>
                                         </div>
-                                        <CardDescription className="text-xs flex items-center gap-1 mt-1">
+                                        <CardDescription className="text-xs flex items-center gap-1 mt-1 text-neutral-400">
                                             <Users className="size-3" /> {bk.client_name} ({bk.client_phone})
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent className="p-4 pt-2 space-y-2 text-xs">
-                                        <div className="flex justify-between text-muted-foreground">
+                                        <div className="flex justify-between text-neutral-400">
                                             <span>Date & Time:</span>
-                                            <span className="font-semibold text-foreground">{bk.event_date} ({bk.start_time} - {bk.end_time})</span>
+                                            <span className="font-semibold text-neutral-200">{bk.event_date} ({bk.start_time} - {bk.end_time})</span>
                                         </div>
-                                        <div className="flex justify-between text-muted-foreground">
+                                        <div className="flex justify-between text-neutral-400">
                                             <span>Package Total:</span>
-                                            <span className="font-bold text-emerald-600">{formatCurrency(bk.total_amount)}</span>
+                                            <span className="font-bold text-[#E50914]">{formatCurrency(bk.total_amount)}</span>
                                         </div>
-                                        <div className="flex justify-between text-muted-foreground">
+                                        <div className="flex justify-between text-neutral-400">
                                             <span>Deposit Paid:</span>
-                                            <span className="font-semibold">{formatCurrency(bk.deposit_amount)}</span>
+                                            <span className="font-semibold text-neutral-200">{formatCurrency(bk.deposit_amount)}</span>
                                         </div>
                                         <div className="pt-2 flex justify-end">
-                                            <Button variant="ghost" size="sm" className="text-destructive h-7 text-xs" onClick={() => handleDeleteBooking(bk.id)}>
+                                            <Button variant="ghost" size="sm" className="text-destructive h-7 text-xs hover:bg-destructive/10" onClick={() => handleDeleteBooking(bk.id)}>
                                                 <Trash2 className="mr-1 size-3" /> Remove
                                             </Button>
                                         </div>

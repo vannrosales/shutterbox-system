@@ -24,9 +24,9 @@ class ShutterboxTest extends TestCase
     {
         $user = User::factory()->create();
         $template = Template::create([
-            'name' => 'Vintage Film 3-Strip',
-            'code' => 'TPL-VINTAGE-01',
-            'category' => 'Retro',
+            'name' => '3 Shots - Black',
+            'code' => 'TPL-3S-BLK',
+            'category' => 'Black Frame',
             'is_active' => true,
         ]);
 

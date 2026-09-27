@@ -24,42 +24,34 @@ class DatabaseSeeder extends Seeder
 
         // 1. Templates
         $t1 = Template::create([
-            'name' => 'Vintage Film 3-Strip',
-            'code' => 'TPL-VINTAGE-01',
-            'category' => 'Retro & Film',
-            'preview_url' => '/images/templates/vintage.png',
+            'name' => '3 Shots - Black',
+            'code' => 'TPL-3S-BLK',
+            'category' => 'Black Frame',
+            'preview_url' => '/images/templates/3s-black.png',
             'is_active' => true,
         ]);
 
         $t2 = Template::create([
-            'name' => 'Pastel Hearts Dual',
-            'code' => 'TPL-PASTEL-02',
-            'category' => 'Cute & Pastel',
-            'preview_url' => '/images/templates/pastel.png',
+            'name' => '4 Shots - Black',
+            'code' => 'TPL-4S-BLK',
+            'category' => 'Black Frame',
+            'preview_url' => '/images/templates/4s-black.png',
             'is_active' => true,
         ]);
 
         $t3 = Template::create([
-            'name' => 'Minimalist Black & White',
-            'code' => 'TPL-MINIMAL-03',
-            'category' => 'Modern Minimal',
-            'preview_url' => '/images/templates/minimal.png',
+            'name' => '4 Shots - White',
+            'code' => 'TPL-4S-WHT',
+            'category' => 'White Frame',
+            'preview_url' => '/images/templates/4s-white.png',
             'is_active' => true,
         ]);
 
         $t4 = Template::create([
-            'name' => 'Cyber Neon Glow',
-            'code' => 'TPL-NEON-04',
-            'category' => 'Party & Glow',
-            'preview_url' => '/images/templates/neon.png',
-            'is_active' => true,
-        ]);
-
-        $t5 = Template::create([
-            'name' => 'Classic Wedding Golden Frame',
-            'code' => 'TPL-WEDDING-05',
-            'category' => 'Formal Event',
-            'preview_url' => '/images/templates/wedding.png',
+            'name' => '3 Shots - B&W',
+            'code' => 'TPL-3S-BNW',
+            'category' => 'B&W Frame',
+            'preview_url' => '/images/templates/3s-bnw.png',
             'is_active' => true,
         ]);
 

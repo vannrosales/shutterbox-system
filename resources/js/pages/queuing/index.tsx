@@ -5,7 +5,7 @@ import { Filter, Ticket } from 'lucide-react';
 import type { BreadcrumbItem } from '@/types';
 import { QueueStats } from './partials/queue-stats';
 import { QueueCard } from './partials/queue-card';
-import { CreateQueueModal } from './partials/create-queue-modal';
+import { CreateQueueForm } from './partials/create-queue-form';
 import { EditQueueModal } from './partials/edit-queue-modal';
 import { ReceiptModal } from './partials/receipt-modal';
 
@@ -65,7 +65,6 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function QueuingIndex({ sessions, templates, boothLocations, todayStats }: Props) {
-    const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editingSession, setEditingSession] = useState<QueueSession | null>(null);
     const [receiptSession, setReceiptSession] = useState<QueueSession | null>(null);
     const [statusFilter, setStatusFilter] = useState<string>('active');
@@ -95,27 +94,6 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
             <Head title="Queuing POS - ShutterBox" />
 
             <div className="flex flex-col gap-6 p-4 md:p-6">
-                {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-neutral-900 border border-neutral-800 p-6 rounded-2xl relative overflow-hidden shadow-sm">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-[#E50914]/10 rounded-full blur-3xl pointer-events-none" />
-                    <div className="z-10">
-                        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2 text-white">
-                            <Ticket className="size-6 text-[#E50914]" /> Photostrip Session Queuing POS
-                        </h1>
-                        <p className="text-sm text-neutral-400 mt-1">
-                            Process walk-in photo booth sessions, select templates, and calculate extra copies.
-                        </p>
-                    </div>
-
-                    <CreateQueueModal
-                        isOpen={isCreateOpen}
-                        onOpenChange={setIsCreateOpen}
-                        templates={templates}
-                        boothLocations={boothLocations}
-                        formatCurrency={formatCurrency}
-                    />
-                </div>
-
                 {/* Edit Queue Ticket Dialog */}
                 <EditQueueModal
                     session={editingSession}
@@ -135,52 +113,67 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                 {/* KPI Summary Banner */}
                 <QueueStats todayStats={todayStats} />
 
-                {/* Queue Filter Bar */}
-                <div className="flex items-center justify-between gap-4 bg-card border border-neutral-800 rounded-xl p-3">
-                    <div className="flex items-center gap-2">
-                        <Filter className="size-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">Filter Queue:</span>
-                        <div className="flex gap-1">
-                            {['active', 'waiting', 'in_booth', 'completed', 'all'].map((st) => (
-                                <Button
-                                    key={st}
-                                    variant={statusFilter === st ? 'default' : 'ghost'}
-                                    size="sm"
-                                    onClick={() => setStatusFilter(st)}
-                                    className={`capitalize text-xs h-8 ${statusFilter === st ? 'bg-[#E50914] text-white hover:bg-[#c10712]' : ''}`}
-                                >
-                                    {st.replace('_', ' ')}
-                                </Button>
-                            ))}
-                        </div>
+                {/* Main POS Split Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    {/* Left Column: Inline Create Queue Form */}
+                    <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-6">
+                        <CreateQueueForm
+                            templates={templates}
+                            boothLocations={boothLocations}
+                            formatCurrency={formatCurrency}
+                        />
                     </div>
 
-                    <span className="text-xs text-muted-foreground font-mono">
-                        Showing {filteredSessions.length} entries
-                    </span>
-                </div>
+                    {/* Right Column: Active Queue List & Controls */}
+                    <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-4">
+                        {/* Queue Filter Bar */}
+                        <div className="flex items-center justify-between gap-4 bg-card border border-neutral-800 rounded-xl p-3 flex-wrap">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <Filter className="size-4 text-muted-foreground" />
+                                <span className="text-sm font-medium">Filter Queue:</span>
+                                <div className="flex gap-1 flex-wrap">
+                                    {['active', 'waiting', 'in_booth', 'completed', 'all'].map((st) => (
+                                        <Button
+                                            key={st}
+                                            variant={statusFilter === st ? 'default' : 'ghost'}
+                                            size="sm"
+                                            onClick={() => setStatusFilter(st)}
+                                            className={`capitalize text-xs h-8 ${statusFilter === st ? 'bg-[#E50914] text-white hover:bg-[#c10712]' : ''}`}
+                                        >
+                                            {st.replace('_', ' ')}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
 
-                {/* Live Queue Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredSessions.length === 0 ? (
-                        <div className="col-span-full py-12 text-center border border-dashed border-neutral-800 rounded-xl">
-                            <Ticket className="size-10 text-muted-foreground mx-auto mb-2" />
-                            <h3 className="font-semibold text-base text-neutral-200">No Queue Entries Found</h3>
-                            <p className="text-sm text-neutral-400">Click 'New Queue Session' above to add customer to queue.</p>
+                            <span className="text-xs text-muted-foreground font-mono">
+                                Showing {filteredSessions.length} entries
+                            </span>
                         </div>
-                    ) : (
-                        filteredSessions.map((session) => (
-                            <QueueCard
-                                key={session.id}
-                                session={session}
-                                onEdit={setEditingSession}
-                                onPrintReceipt={setReceiptSession}
-                                onStatusUpdate={handleStatusUpdate}
-                                onDelete={handleDelete}
-                                formatCurrency={formatCurrency}
-                            />
-                        ))
-                    )}
+
+                        {/* Live Queue Cards Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {filteredSessions.length === 0 ? (
+                                <div className="col-span-full py-12 text-center border border-dashed border-neutral-800 rounded-xl bg-neutral-900/30">
+                                    <Ticket className="size-10 text-muted-foreground mx-auto mb-2" />
+                                    <h3 className="font-semibold text-base text-neutral-200">No Queue Entries Found</h3>
+                                    <p className="text-sm text-neutral-400">Fill out the form on the left to add a customer to the queue.</p>
+                                </div>
+                            ) : (
+                                filteredSessions.map((session) => (
+                                    <QueueCard
+                                        key={session.id}
+                                        session={session}
+                                        onEdit={setEditingSession}
+                                        onPrintReceipt={setReceiptSession}
+                                        onStatusUpdate={handleStatusUpdate}
+                                        onDelete={handleDelete}
+                                        formatCurrency={formatCurrency}
+                                    />
+                                ))
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
         </>

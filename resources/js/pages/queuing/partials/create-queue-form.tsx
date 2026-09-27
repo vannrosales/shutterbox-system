@@ -1,12 +1,12 @@
 import { FormEvent } from 'react';
 import { useForm } from '@inertiajs/react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Sparkles } from 'lucide-react';
+import { Sparkles, Ticket } from 'lucide-react';
 
 interface Template {
     id: number;
@@ -23,16 +23,12 @@ interface BoothLocation {
 }
 
 interface Props {
-    isOpen: boolean;
-    onOpenChange: (open: boolean) => void;
     templates: Template[];
     boothLocations: BoothLocation[];
     formatCurrency: (amount: number) => string;
 }
 
-export function CreateQueueModal({
-    isOpen,
-    onOpenChange,
+export function CreateQueueForm({
     templates,
     boothLocations,
     formatCurrency,
@@ -83,53 +79,51 @@ export function CreateQueueModal({
         e.preventDefault();
         post('/queuing', {
             onSuccess: () => {
-                onOpenChange(false);
                 reset();
             },
         });
     };
 
     return (
-        <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogTrigger asChild>
-                <Button className="bg-[#E50914] hover:bg-[#c10712] text-white font-semibold shadow-md z-10">
-                    <Plus className="mr-2 size-4" /> New Queue Session
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg border border-neutral-800 bg-neutral-950 text-white p-6 rounded-2xl shadow-2xl">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-lg font-bold tracking-tight">
-                        <Sparkles className="size-5 text-[#E50914]" /> Create Queue Ticket
-                    </DialogTitle>
-                    <DialogDescription className="text-xs text-neutral-400">
-                        Select session package, photostrip layout templates, and payment details.
-                    </DialogDescription>
-                </DialogHeader>
+        <Card className="border-neutral-800 bg-neutral-950 text-white shadow-xl py-5">
+            <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg font-bold tracking-tight text-white">
+                    <Sparkles className="size-5 text-[#E50914]" /> Create Queue Ticket
+                </CardTitle>
+                <CardDescription className="text-xs text-neutral-400">
+                    Process walk-in session, select template, and calculate price.
+                </CardDescription>
+            </CardHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4 py-2">
+            <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Customer Name & Location */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-1.5">
-                            <Label htmlFor="customer_name" className="text-xs font-medium text-neutral-300">Customer Name</Label>
+                            <Label htmlFor="customer_name" className="text-xs font-medium text-neutral-300">
+                                Customer Name
+                            </Label>
                             <Input
                                 id="customer_name"
                                 placeholder="Guest / Group name"
                                 value={data.customer_name}
                                 onChange={(e) => setData('customer_name', e.target.value)}
-                                className="h-9 text-xs bg-neutral-900 border-neutral-800 focus:border-[#E50914]"
+                                className="h-9 text-xs bg-neutral-900 border-neutral-800 focus:border-[#E50914] text-white"
                             />
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label htmlFor="booth_location" className="text-xs font-medium text-neutral-300">Booth Location</Label>
+                            <Label htmlFor="booth_location" className="text-xs font-medium text-neutral-300">
+                                Booth Location
+                            </Label>
                             <Select
                                 value={String(data.booth_location_id)}
                                 onValueChange={(val) => setData('booth_location_id', val)}
                             >
-                                <SelectTrigger id="booth_location" className="h-9 text-xs bg-neutral-900 border-neutral-800">
+                                <SelectTrigger id="booth_location" className="h-9 text-xs bg-neutral-900 border-neutral-800 text-white">
                                     <SelectValue placeholder="Select Location" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-neutral-900 border-neutral-800">
+                                <SelectContent className="bg-neutral-900 border-neutral-800 text-white">
                                     {boothLocations.map((loc) => (
                                         <SelectItem key={loc.id} value={String(loc.id)}>
                                             {loc.name}
@@ -154,10 +148,10 @@ export function CreateQueueModal({
                             value={String(data.sessions_count)}
                             onValueChange={handleSessionsCountChange}
                         >
-                            <SelectTrigger id="sessions_count" className="h-9 text-xs bg-neutral-900 border-neutral-800">
+                            <SelectTrigger id="sessions_count" className="h-9 text-xs bg-neutral-900 border-neutral-800 text-white">
                                 <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-neutral-900 border-neutral-800">
+                            <SelectContent className="bg-neutral-900 border-neutral-800 text-white">
                                 <SelectItem value="1">1 Session (2 strips - ₱100)</SelectItem>
                                 <SelectItem value="2">2 Sessions (4 strips - ₱200)</SelectItem>
                                 <SelectItem value="3">3 Sessions (6 strips - ₱300)</SelectItem>
@@ -236,10 +230,10 @@ export function CreateQueueModal({
                             value={String(data.extra_copies)}
                             onValueChange={(val) => setData('extra_copies', parseInt(val, 10))}
                         >
-                            <SelectTrigger id="extra_copies" className="h-9 text-xs bg-neutral-900 border-neutral-800">
+                            <SelectTrigger id="extra_copies" className="h-9 text-xs bg-neutral-900 border-neutral-800 text-white">
                                 <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-neutral-900 border-neutral-800">
+                            <SelectContent className="bg-neutral-900 border-neutral-800 text-white">
                                 <SelectItem value="0">0 Extra Copies</SelectItem>
                                 <SelectItem value="1">+1 Copy Set (+2 strips - +₱100)</SelectItem>
                                 <SelectItem value="2">+2 Copy Sets (+4 strips - +₱200)</SelectItem>
@@ -256,15 +250,17 @@ export function CreateQueueModal({
                     {/* Payment Method & Status */}
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
-                            <Label htmlFor="payment_method" className="text-xs font-medium text-neutral-300">Payment Method</Label>
+                            <Label htmlFor="payment_method" className="text-xs font-medium text-neutral-300">
+                                Payment Method
+                            </Label>
                             <Select
                                 value={data.payment_method}
                                 onValueChange={(val) => setData('payment_method', val)}
                             >
-                                <SelectTrigger id="payment_method" className="h-9 text-xs bg-neutral-900 border-neutral-800">
+                                <SelectTrigger id="payment_method" className="h-9 text-xs bg-neutral-900 border-neutral-800 text-white">
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className="bg-neutral-900 border-neutral-800">
+                                <SelectContent className="bg-neutral-900 border-neutral-800 text-white">
                                     <SelectItem value="cash">Cash</SelectItem>
                                     <SelectItem value="gcash">GCash</SelectItem>
                                     <SelectItem value="maya">Maya</SelectItem>
@@ -274,15 +270,17 @@ export function CreateQueueModal({
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label htmlFor="payment_status" className="text-xs font-medium text-neutral-300">Payment Status</Label>
+                            <Label htmlFor="payment_status" className="text-xs font-medium text-neutral-300">
+                                Payment Status
+                            </Label>
                             <Select
                                 value={data.payment_status}
                                 onValueChange={(val) => setData('payment_status', val)}
                             >
-                                <SelectTrigger id="payment_status" className="h-9 text-xs bg-neutral-900 border-neutral-800">
+                                <SelectTrigger id="payment_status" className="h-9 text-xs bg-neutral-900 border-neutral-800 text-white">
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className="bg-neutral-900 border-neutral-800">
+                                <SelectContent className="bg-neutral-900 border-neutral-800 text-white">
                                     <SelectItem value="paid">Paid</SelectItem>
                                     <SelectItem value="pending">Pending</SelectItem>
                                 </SelectContent>
@@ -312,25 +310,15 @@ export function CreateQueueModal({
                         </div>
                     </div>
 
-                    <DialogFooter className="pt-2 gap-2">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => onOpenChange(false)}
-                            className="h-9 text-xs border-neutral-800 text-neutral-400 hover:bg-neutral-800"
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="submit"
-                            disabled={processing || data.template_ids.length === 0}
-                            className="h-9 text-xs bg-[#E50914] text-white font-semibold hover:bg-[#c10712] px-5"
-                        >
-                            Generate Ticket
-                        </Button>
-                    </DialogFooter>
+                    <Button
+                        type="submit"
+                        disabled={processing || data.template_ids.length === 0}
+                        className="w-full h-10 text-xs bg-[#E50914] text-white font-semibold hover:bg-[#c10712] shadow-md transition-colors"
+                    >
+                        <Ticket className="mr-2 size-4" /> Issue Queue Ticket
+                    </Button>
                 </form>
-            </DialogContent>
-        </Dialog>
+            </CardContent>
+        </Card>
     );
 }

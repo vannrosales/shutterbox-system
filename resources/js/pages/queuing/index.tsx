@@ -186,7 +186,7 @@ export default function QueuingIndex({ sessions, templates, boothLocations, toda
                                 <Filter className="size-3.5 text-muted-foreground" />
                                 <span className="text-xs font-medium">Filter Queue:</span>
                                 <div className="flex gap-1 flex-wrap">
-                                    {['active', 'waiting', 'in_booth', 'skipped', 'completed', 'all'].map((st) => (
+                                    {['active', 'waiting', 'in_booth', 'skipped', 'completed', 'refunded', 'all'].map((st) => (
                                         <Button
                                             key={st}
                                             variant={statusFilter === st ? 'default' : 'ghost'}

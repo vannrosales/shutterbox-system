@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, FastForward, Pencil, Printer, Trash2 } from 'lucide-react';
+import { CheckCircle2, FastForward, Pencil, Printer, RotateCcw, Trash2 } from 'lucide-react';
 
 interface Template {
     id: number;
@@ -56,6 +56,14 @@ export function QueueCard({
     onDelete,
     formatCurrency,
 }: Props) {
+    const isRefunded = session.payment_status === 'refunded' || session.status === 'refunded';
+
+    const handleRefund = () => {
+        if (confirm(`Refund ticket ${session.queue_number} (${formatCurrency(session.total_price)}) and deduct amount from total sales?`)) {
+            onStatusUpdate(session.id, 'refunded');
+        }
+    };
+
     return (
         <Card className="relative overflow-hidden flex flex-col justify-between border border-neutral-800 shadow-sm bg-neutral-950 text-white">
             {/* Top Ticket Ribbon */}
@@ -67,7 +75,7 @@ export function QueueCard({
                     <Badge className={
                         session.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
                         session.status === 'skipped' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                        session.status === 'cancelled' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                        (session.status === 'cancelled' || isRefunded) ? 'bg-red-500/10 text-red-500 border-red-500/20' :
                         'bg-[#E50914]/10 text-[#E50914] border-[#E50914]/20'
                     }>
                         {session.status === 'waiting' ? 'WAITING QUEUE' : session.status.replace('_', ' ').toUpperCase()}
@@ -121,7 +129,9 @@ export function QueueCard({
                     </div>
                     <div>
                         <span className="text-neutral-400 block">Total Amount:</span>
-                        <span className="font-bold text-emerald-400">{formatCurrency(session.total_price)}</span>
+                        <span className={`font-bold ${isRefunded ? 'line-through text-red-400' : 'text-emerald-400'}`}>
+                            {formatCurrency(session.total_price)} {isRefunded && '(REFUNDED)'}
+                        </span>
                     </div>
                 </div>
 
@@ -146,25 +156,37 @@ export function QueueCard({
             <div className="p-3 border-t border-neutral-800 bg-neutral-900/40 flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex gap-1.5 flex-wrap">
                     {(session.status === 'waiting' || session.status === 'skipped') && (
-                        <Button
-                            size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs h-8"
-                            onClick={() => onStatusUpdate(session.id, 'completed')}
-                        >
-                            <CheckCircle2 className="mr-1 size-3.5" /> Mark Completed
-                        </Button>
-                    )}
+                        <>
+                            <Button
+                                size="sm"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs h-8"
+                                onClick={() => onStatusUpdate(session.id, 'completed')}
+                            >
+                                <CheckCircle2 className="mr-1 size-3.5" /> Mark Completed
+                            </Button>
 
-                    {(session.status === 'waiting') && (
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 font-medium text-xs h-8"
-                            onClick={() => onStatusUpdate(session.id, 'skipped')}
-                            title="Client left or unresponsive - skip to next queue entry"
-                        >
-                            <FastForward className="mr-1 size-3.5" /> Skip
-                        </Button>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-red-500/40 text-red-400 hover:bg-red-500/10 font-medium text-xs h-8"
+                                onClick={handleRefund}
+                                title="Refund ticket and deduct amount from total sales"
+                            >
+                                <RotateCcw className="mr-1 size-3.5" /> Refund
+                            </Button>
+
+                            {session.status === 'waiting' && (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 font-medium text-xs h-8"
+                                    onClick={() => onStatusUpdate(session.id, 'skipped')}
+                                    title="Client left or unresponsive - skip queue entry"
+                                >
+                                    <FastForward className="mr-1 size-3.5" /> Skip
+                                </Button>
+                            )}
+                        </>
                     )}
                 </div>
 

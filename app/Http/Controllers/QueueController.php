@@ -28,8 +28,9 @@ class QueueController extends Controller
                 WHEN 'waiting' THEN 2 
                 WHEN 'skipped' THEN 3 
                 WHEN 'completed' THEN 4 
-                WHEN 'cancelled' THEN 5 
-                ELSE 6 END")
+                WHEN 'refunded' THEN 5
+                WHEN 'cancelled' THEN 6 
+                ELSE 7 END")
             ->orderBy('id', 'asc')
             ->get();
 
@@ -87,14 +88,20 @@ class QueueController extends Controller
     public function updateStatus(Request $request, QueueSession $queueSession): RedirectResponse
     {
         $validated = $request->validate([
-            'status' => ['required', 'string', 'in:waiting,in_booth,completed,cancelled,skipped'],
+            'status' => ['required', 'string', 'in:waiting,in_booth,completed,cancelled,skipped,refunded'],
         ]);
 
-        $queueSession->update([
-            'status' => $validated['status'],
-        ]);
+        $updateData = ['status' => $validated['status']];
 
-        return back()->with('success', "Queue status updated to {$validated['status']}.");
+        if (in_array($validated['status'], ['cancelled', 'refunded'], true)) {
+            $updateData['payment_status'] = 'refunded';
+        } else {
+            $updateData['payment_status'] = 'paid';
+        }
+
+        $queueSession->update($updateData);
+
+        return back()->with('success', "Queue ticket {$queueSession->queue_number} status updated to {$validated['status']}.");
     }
 
     public function destroy(QueueSession $queueSession): RedirectResponse

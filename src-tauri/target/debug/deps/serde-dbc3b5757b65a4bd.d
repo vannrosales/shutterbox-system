@@ -1,0 +1,14 @@
+F:\React + Laravel Projects\shutterbox-system\src-tauri\target\debug\deps\serde-dbc3b5757b65a4bd.d: C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\lib.rs C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\integer128.rs C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\private\mod.rs C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\private\de.rs C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\private\ser.rs F:\React\ +\ Laravel\ Projects\shutterbox-system\src-tauri\target\debug\build\serde-dce4433ffc617ec1\out/private.rs
+
+F:\React + Laravel Projects\shutterbox-system\src-tauri\target\debug\deps\libserde-dbc3b5757b65a4bd.rlib: C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\lib.rs C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\integer128.rs C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\private\mod.rs C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\private\de.rs C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\private\ser.rs F:\React\ +\ Laravel\ Projects\shutterbox-system\src-tauri\target\debug\build\serde-dce4433ffc617ec1\out/private.rs
+
+F:\React + Laravel Projects\shutterbox-system\src-tauri\target\debug\deps\libserde-dbc3b5757b65a4bd.rmeta: C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\lib.rs C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\integer128.rs C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\private\mod.rs C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\private\de.rs C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\private\ser.rs F:\React\ +\ Laravel\ Projects\shutterbox-system\src-tauri\target\debug\build\serde-dce4433ffc617ec1\out/private.rs
+
+C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\lib.rs:
+C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\integer128.rs:
+C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\private\mod.rs:
+C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\private\de.rs:
+C:\Users\Vann\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\private\ser.rs:
+F:\React\ +\ Laravel\ Projects\shutterbox-system\src-tauri\target\debug\build\serde-dce4433ffc617ec1\out/private.rs:
+
+# env-dep:OUT_DIR=F:\\React + Laravel Projects\\shutterbox-system\\src-tauri\\target\\debug\\build\\serde-dce4433ffc617ec1\\out

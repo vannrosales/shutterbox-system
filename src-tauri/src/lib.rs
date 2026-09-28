@@ -16,11 +16,13 @@ pub fn run() {
             let resource_dir = app.path().resource_dir().unwrap_or_else(|_| PathBuf::from("."));
 
             let bundled_php_name = if cfg!(windows) { "php.exe" } else { "php" };
-            let bundled_php = resource_dir.join("resources").join("bin").join(bundled_php_name);
+            let path_opt1 = resource_dir.join("resources").join("bin").join(bundled_php_name);
+            let path_opt2 = resource_dir.join("bin").join(bundled_php_name);
 
-            let (php_binary, working_dir) = if bundled_php.exists() {
-                let app_dir = resource_dir.join("resources").join("app");
-                (bundled_php.to_string_lossy().to_string(), app_dir)
+            let (php_binary, working_dir) = if path_opt1.exists() {
+                (path_opt1.to_string_lossy().to_string(), resource_dir.join("resources").join("app"))
+            } else if path_opt2.exists() {
+                (path_opt2.to_string_lossy().to_string(), resource_dir.join("app"))
             } else {
                 (bundled_php_name.to_string(), PathBuf::from("."))
             };
@@ -40,7 +42,7 @@ pub fn run() {
 
             let mut command = Command::new(&php_binary);
             command.current_dir(&working_dir);
-            command.args(["artisan", "serve", "--host=127.0.0.1", "--port=8085"]);
+            command.args(["artisan", "serve", "--host=127.0.0.1", "--port=8000"]);
 
             // Hide console window on Windows
             #[cfg(target_os = "windows")]

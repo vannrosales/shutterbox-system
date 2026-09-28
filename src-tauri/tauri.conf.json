@@ -35,6 +35,9 @@
       "icons/icon.ico"
     ],
     "category": "DeveloperTool",
+    "resources": [
+      "resources/**/*"
+    ],
     "shortDescription": "Shutterbox System Desktop Application",
     "longDescription": "Shutterbox System Desktop Application built with Laravel, Inertia React, and Tauri v2."
   }

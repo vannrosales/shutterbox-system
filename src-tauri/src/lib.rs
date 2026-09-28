@@ -1,6 +1,10 @@
+use std::path::PathBuf;
 use std::process::{Child, Command};
 use std::sync::Mutex;
 use tauri::Manager;
+
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 
 struct ServerProcess(Mutex<Option<Child>>);
 
@@ -9,22 +13,50 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
+            let resource_dir = app.path().resource_dir().unwrap_or_else(|_| PathBuf::from("."));
+
+            let bundled_php_name = if cfg!(windows) { "php.exe" } else { "php" };
+            let bundled_php = resource_dir.join("resources").join("bin").join(bundled_php_name);
+
+            let (php_binary, working_dir) = if bundled_php.exists() {
+                let app_dir = resource_dir.join("resources").join("app");
+                (bundled_php.to_string_lossy().to_string(), app_dir)
+            } else {
+                (bundled_php_name.to_string(), PathBuf::from("."))
+            };
+
+            // Set up app data directory for offline SQLite database persistence
+            if let Ok(app_data_dir) = app.path().app_data_dir() {
+                let _ = std::fs::create_dir_all(&app_data_dir);
+                let db_path = app_data_dir.join("database.sqlite");
+                if !db_path.exists() {
+                    let _ = std::fs::File::create(&db_path);
+                }
+                std::env::set_var("DB_DATABASE", db_path.to_string_lossy().to_string());
+            }
+
             std::env::set_var("APP_ENV", "production");
             std::env::set_var("APP_DEBUG", "false");
 
-            let php_binary = if cfg!(windows) { "php.exe" } else { "php" };
+            let mut command = Command::new(&php_binary);
+            command.current_dir(&working_dir);
+            command.args(["artisan", "serve", "--host=127.0.0.1", "--port=8085"]);
 
-            let mut command = Command::new(php_binary);
-            command.args(["artisan", "serve", "--port=8085"]);
+            // Hide console window on Windows
+            #[cfg(target_os = "windows")]
+            command.creation_flags(0x08000000); // CREATE_NO_WINDOW
 
             match command.spawn() {
                 Ok(child) => {
                     app.manage(ServerProcess(Mutex::new(Some(child))));
                 }
                 Err(e) => {
-                    eprintln!("Failed to spawn PHP server process: {}", e);
+                    eprintln!("Failed to spawn PHP server process using {:?}: {}", php_binary, e);
                 }
             }
+
+            // Give PHP server a brief moment to bind to port 8085
+            std::thread::sleep(std::time::Duration::from_millis(800));
 
             Ok(())
         })

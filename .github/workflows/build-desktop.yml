@@ -69,6 +69,25 @@ jobs:
       - name: Build Frontend Assets
         run: npm run build
 
+      - name: Prepare Offline Bundle Resources (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "src-tauri/resources/bin"
+          New-Item -ItemType Directory -Force -Path "src-tauri/resources/app"
+          $phpDir = Split-Path (Get-Command php.exe).Path
+          Copy-Item -Path "$phpDir\*" -Destination "src-tauri/resources/bin" -Recurse -Force
+          Copy-Item -Path "app","bootstrap","config","database","public","resources","routes","storage","vendor","artisan",".env" -Destination "src-tauri/resources/app" -Recurse -Force
+
+      - name: Prepare Offline Bundle Resources (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          mkdir -p src-tauri/resources/bin
+          mkdir -p src-tauri/resources/app
+          cp $(which php) src-tauri/resources/bin/php
+          cp -R app bootstrap config database public resources routes storage vendor artisan .env src-tauri/resources/app/
+
       - name: Build Tauri Desktop Application
         uses: tauri-apps/tauri-action@v0
         env:

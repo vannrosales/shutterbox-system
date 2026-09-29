@@ -27,18 +27,26 @@ pub fn run() {
                 (bundled_php_name.to_string(), PathBuf::from("."))
             };
 
-            // Set up app data directory for offline SQLite database persistence
+            // Set up app data directory for offline storage & SQLite database persistence
             if let Ok(app_data_dir) = app.path().app_data_dir() {
                 let _ = std::fs::create_dir_all(&app_data_dir);
+                let views_dir = app_data_dir.join("storage").join("framework").join("views");
+                let logs_dir = app_data_dir.join("storage").join("logs");
+                let _ = std::fs::create_dir_all(&views_dir);
+                let _ = std::fs::create_dir_all(&logs_dir);
+
                 let db_path = app_data_dir.join("database.sqlite");
                 if !db_path.exists() {
                     let _ = std::fs::File::create(&db_path);
                 }
                 std::env::set_var("DB_DATABASE", db_path.to_string_lossy().to_string());
+                std::env::set_var("VIEW_COMPILED_PATH", views_dir.to_string_lossy().to_string());
             }
 
             std::env::set_var("APP_ENV", "production");
-            std::env::set_var("APP_DEBUG", "false");
+            std::env::set_var("APP_DEBUG", "true");
+            std::env::set_var("SESSION_DRIVER", "cookie");
+            std::env::set_var("APP_KEY", "base64:4sF4uV+J3+GZ80w6W5zP3o8K8L7M6N5P4Q3R2S1T0U=");
 
             let mut command = Command::new(&php_binary);
             command.current_dir(&working_dir);

@@ -1,6 +1,6 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, execSync, ChildProcess } from 'child_process';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
@@ -36,34 +36,86 @@ function getLaravelAppPath(): string {
     return path.resolve(__dirname, '..');
 }
 
-function startPhpServer(): void {
-    const phpBinary = getPhpBinaryPath();
-    const appPath = getLaravelAppPath();
-
-    // Prepare SQLite database in user data directory for offline persistence
+function prepareEnvironment(appPath: string): { env: Record<string, string>; dbPath: string } {
     const userDataPath = app.getPath('userData');
-    if (!fs.existsSync(userDataPath)) {
-        fs.mkdirSync(userDataPath, { recursive: true });
-    }
+    const storagePath = path.join(userDataPath, 'storage');
+    const viewsPath = path.join(storagePath, 'framework', 'views');
+    const cachePath = path.join(storagePath, 'framework', 'cache');
+    const sessionsPath = path.join(storagePath, 'framework', 'sessions');
+    const logsPath = path.join(storagePath, 'logs');
+
+    // Create user-writable storage directories
+    [userDataPath, storagePath, viewsPath, cachePath, sessionsPath, logsPath].forEach((dir) => {
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+    });
+
     const dbPath = path.join(userDataPath, 'database.sqlite');
     if (!fs.existsSync(dbPath)) {
         fs.writeFileSync(dbPath, '');
     }
 
-    const env = {
-        ...process.env,
+    // Resolve APP_KEY from .env or fallback key
+    let appKey = 'base64:4sF4uV+J3+GZ80w6W5zP3o8K8L7M6N5P4Q3R2S1T0U=';
+    const envFile = path.join(appPath, '.env');
+    if (fs.existsSync(envFile)) {
+        const content = fs.readFileSync(envFile, 'utf8');
+        const match = content.match(/^APP_KEY=(.+)$/m);
+        if (match && match[1].trim()) {
+            appKey = match[1].trim();
+        }
+    }
+
+    const env: Record<string, string> = {
+        ...(process.env as Record<string, string>),
         APP_ENV: 'production',
-        APP_DEBUG: 'false',
+        APP_DEBUG: 'true',
+        APP_KEY: appKey,
+        APP_URL: SERVER_URL,
+        DB_CONNECTION: 'sqlite',
         DB_DATABASE: dbPath,
+        VIEW_COMPILED_PATH: viewsPath,
+        SESSION_DRIVER: 'cookie',
+        LOG_CHANNEL: 'single',
     };
 
+    return { env, dbPath };
+}
+
+function startPhpServer(): void {
+    const phpBinary = getPhpBinaryPath();
+    const appPath = getLaravelAppPath();
+    const userDataPath = app.getPath('userData');
+
+    const { env } = prepareEnvironment(appPath);
+
+    // Run database migrations synchronously on startup
+    try {
+        console.log('[Electron] Running database migrations...');
+        execSync(`"${phpBinary}" artisan migrate --force`, {
+            cwd: appPath,
+            env,
+            windowsHide: true,
+        });
+        console.log('[Electron] Migrations completed successfully.');
+    } catch (migErr) {
+        console.error('[Electron] Migration warning:', migErr);
+    }
+
     console.log(`[Electron] Starting PHP server using binary "${phpBinary}" in "${appPath}"`);
+
+    const logFile = path.join(userDataPath, 'php_server.log');
+    const logStream = fs.createWriteStream(logFile, { flags: 'a' });
 
     phpProcess = spawn(phpBinary, ['artisan', 'serve', '--host=127.0.0.1', `--port=${PORT}`], {
         cwd: appPath,
         env,
         windowsHide: true,
     });
+
+    phpProcess.stdout?.pipe(logStream);
+    phpProcess.stderr?.pipe(logStream);
 
     phpProcess.stdout?.on('data', (data) => {
         console.log(`[PHP stdout]: ${data}`);
@@ -107,7 +159,6 @@ function createWindow(): void {
         },
     });
 
-    // Retry connection until PHP server is ready
     let attempts = 0;
     const maxAttempts = 30;
 

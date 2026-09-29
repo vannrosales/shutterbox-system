@@ -1,5 +1,9 @@
 {
     "$schema": "https://www.schemastore.org/package.json",
+    "name": "shutterbox-system",
+    "version": "0.1.0",
+    "description": "Shutterbox System Desktop Application",
+    "author": "Shutterbox",
     "private": true,
     "type": "module",
     "main": "dist-electron/main.js",

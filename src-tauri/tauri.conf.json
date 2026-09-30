@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "identifier": "com.shutterbox.system",
   "build": {
-    "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:8000",
+    "beforeDevCommand": "composer run dev",
+    "devUrl": "http://127.0.0.1:8000",
     "beforeBuildCommand": "node scripts/prepare-tauri.js",
-    "frontendDist": "http://localhost:8000"
+    "frontendDist": "http://127.0.0.1:8000"
   },
   "app": {
     "windows": [
@@ -17,7 +17,7 @@
         "height": 800,
         "resizable": true,
         "fullscreen": false,
-        "url": "http://localhost:8000"
+        "url": "http://127.0.0.1:8000"
       }
     ],
     "security": {

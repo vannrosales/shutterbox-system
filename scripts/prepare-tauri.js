@@ -78,8 +78,8 @@ if (process.platform === 'win32') {
     if (fs.existsSync(phpIniPath)) {
         let iniContent = fs.readFileSync(phpIniPath, 'utf8');
 
-        // Set extension_dir to ext
-        if (!iniContent.includes('extension_dir = "ext"')) {
+        // Ensure extension_dir is correctly set to relative or absolute path
+        if (!iniContent.includes('extension_dir = "ext"') && !iniContent.includes('extension_dir = "../bin/ext"')) {
             iniContent = 'extension_dir = "ext"\n' + iniContent;
         }
 
@@ -104,6 +104,14 @@ if (process.platform === 'win32') {
 
         fs.writeFileSync(phpIniPath, iniContent);
         console.log('[Tauri Prepare] Configured php.ini with SQLite and required extensions.');
+
+        // Copy ext folder to app target as fallback for relative execution
+        const binExtDir = path.join(binTargetDir, 'ext');
+        const appExtDir = path.join(appTargetDir, 'ext');
+        if (fs.existsSync(binExtDir)) {
+            fs.cpSync(binExtDir, appExtDir, { recursive: true });
+            console.log('[Tauri Prepare] Copied PHP ext directory to app target.');
+        }
     }
 } else {
     console.log(`[Tauri Prepare] Copying PHP binary to ${binTargetDir}...`);
@@ -125,6 +133,7 @@ const copyItems = [
     'storage',
     'vendor',
     'artisan',
+    'router.php',
     '.env'
 ];
 

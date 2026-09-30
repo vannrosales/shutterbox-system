@@ -61,7 +61,7 @@ class EventController extends Controller
     public function toggleStatus(Request $request, BoothLocation $boothLocation): RedirectResponse
     {
         $newStatus = $boothLocation->status === 'active' ? 'inactive' : 'active';
-        
+
         $boothLocation->update([
             'status' => $newStatus,
         ]);

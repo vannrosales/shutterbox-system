@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AutoAuthenticateOfflineUser;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
@@ -24,6 +25,7 @@ return $app
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [
+            AutoAuthenticateOfflineUser::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,

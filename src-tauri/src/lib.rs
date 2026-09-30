@@ -24,7 +24,12 @@ pub fn run() {
             } else if path_opt2.exists() {
                 (path_opt2, resource_dir.join("app"))
             } else {
-                (PathBuf::from(bundled_php_name), PathBuf::from("."))
+                let dev_app_dir = if PathBuf::from("../artisan").exists() {
+                    PathBuf::from("..")
+                } else {
+                    PathBuf::from(".")
+                };
+                (PathBuf::from(bundled_php_name), dev_app_dir)
             };
 
             // Set up writable app data directory for SQLite DB and storage framework files
@@ -42,6 +47,7 @@ pub fn run() {
             let _ = std::fs::create_dir_all(&logs_dir);
 
             let db_path = app_data_dir.join("database.sqlite");
+            let is_new_db = !db_path.exists() || std::fs::metadata(&db_path).map(|m| m.len() == 0).unwrap_or(true);
             if !db_path.exists() {
                 let _ = std::fs::File::create(&db_path);
             }
@@ -67,7 +73,6 @@ pub fn run() {
                 std::env::set_var(k, v);
             }
 
-            // Run artisan migrations on launch
             let mut migrate_cmd = Command::new(&php_binary);
             migrate_cmd.current_dir(&working_dir);
             migrate_cmd.args(["artisan", "migrate", "--force"]);
@@ -84,28 +89,66 @@ pub fn run() {
                 }
             }
 
-            // Spawn artisan serve process
-            let mut serve_cmd = Command::new(&php_binary);
-            serve_cmd.current_dir(&working_dir);
-            serve_cmd.args(["artisan", "serve", "--host=127.0.0.1", "--port=8000"]);
-            for (k, v) in &env_pairs {
-                serve_cmd.env(k, v);
+            if is_new_db {
+                let mut seed_cmd = Command::new(&php_binary);
+                seed_cmd.current_dir(&working_dir);
+                seed_cmd.args(["artisan", "db:seed", "--force"]);
+                for (k, v) in &env_pairs {
+                    seed_cmd.env(k, v);
+                }
+
+                #[cfg(target_os = "windows")]
+                seed_cmd.creation_flags(0x08000000);
+
+                let _ = seed_cmd.output();
             }
 
-            #[cfg(target_os = "windows")]
-            serve_cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-
-            match serve_cmd.spawn() {
-                Ok(child) => {
-                    app.manage(ServerProcess(Mutex::new(Some(child))));
-                }
-                Err(e) => {
-                    eprintln!("Failed to spawn PHP server process: {}", e);
+            // Add bundled PHP directory to system PATH for child processes
+            if let Some(bin_dir) = php_binary.parent() {
+                if let Ok(existing_path) = std::env::var("PATH") {
+                    let new_path = format!("{};{}", bin_dir.to_string_lossy(), existing_path);
+                    std::env::set_var("PATH", &new_path);
                 }
             }
 
-            // Give PHP server time to bind
-            std::thread::sleep(std::time::Duration::from_millis(800));
+            // Spawn PHP web server process if not already running on port 8000
+            if std::net::TcpStream::connect("127.0.0.1:8000").is_err() {
+                let mut serve_cmd = Command::new(&php_binary);
+                serve_cmd.current_dir(&working_dir);
+
+                let router_script = working_dir.join("router.php");
+                if router_script.exists() {
+                    serve_cmd.args(["-S", "127.0.0.1:8000", "router.php"]);
+                } else {
+                    serve_cmd.args(["artisan", "serve", "--host=127.0.0.1", "--port=8000"]);
+                }
+
+                for (k, v) in &env_pairs {
+                    serve_cmd.env(k, v);
+                }
+
+                #[cfg(target_os = "windows")]
+                serve_cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+
+                match serve_cmd.spawn() {
+                    Ok(child) => {
+                        app.manage(ServerProcess(Mutex::new(Some(child))));
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to spawn PHP server process: {}", e);
+                    }
+                }
+            }
+
+            // Poll server health until port 8000 is listening
+            let start = std::time::Instant::now();
+            let timeout = std::time::Duration::from_secs(15);
+            while start.elapsed() < timeout {
+                if std::net::TcpStream::connect("127.0.0.1:8000").is_ok() {
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(150));
+            }
 
             Ok(())
         })

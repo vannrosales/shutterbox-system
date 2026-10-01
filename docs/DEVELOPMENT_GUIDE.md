@@ -1,12 +1,28 @@
-# Developer Setup & Operations Guide (Pure Tauri + Rust + SQLite)
+# Developer Setup & Operations Guide (macOS & Windows)
 
-> **Target Stack**: Tauri 2.0 + Rust 2021 + SQLx (SQLite) + React 19 + TypeScript
+> **Target Stack**: Tauri 2.0 + Rust 2021 + SQLx (SQLite) + React 19 + TypeScript  
+> **Supported Desktop OS**: macOS (Apple Silicon M1-M4 & Intel x86_64) and Windows 10/11  
 
 ---
 
-## 1. Environment Setup
+## 1. Prerequisites & Environment Setup
 
-### Windows 10/11 Prerequisites
+### macOS Requirements (Apple Silicon M1-M4 & Intel)
+1. **Xcode Command Line Tools**:
+   ```bash
+   xcode-select --install
+   ```
+2. **Rust Toolchain with Universal Apple Targets**:
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   rustup target add aarch64-apple-darwin x86_64-apple-darwin
+   ```
+3. **Node.js 22+ (Homebrew)**:
+   ```bash
+   brew install node
+   ```
+
+### Windows 10/11 Requirements
 1. **Visual Studio 2022 C++ Build Tools**:
    - Install **Desktop development with C++** via Visual Studio Installer.
 2. **Rust Toolchain**:
@@ -19,88 +35,38 @@
    winget install OpenJS.NodeJS.LTS
    ```
 
-### macOS Prerequisites (Intel & Apple Silicon)
-1. **Xcode Command Line Tools**:
-   ```bash
-   xcode-select --install
-   ```
-2. **Rust Toolchain**:
-   ```bash
-   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-   rustup target add aarch64-apple-darwin x86_64-apple-darwin
-   ```
-3. **Node.js 22+**:
-   ```bash
-   brew install node
-   ```
-
 ---
 
-## 2. Cargo Dependencies (`src-tauri/Cargo.toml`)
-
-```toml
-[package]
-name = "shutterbox-system"
-version = "0.1.0"
-edition = "2021"
-
-[build-dependencies]
-tauri-build = { version = "2.0", features = [] }
-
-[dependencies]
-tauri = { version = "2.0", features = ["tray-icon"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-tokio = { version = "1.40", features = ["full"] }
-sqlx = { version = "0.8", features = ["runtime-tokio", "tls-native-tls", "sqlite", "migrate"] }
-```
-
----
-
-## 3. Rust Database & IPC Implementation Example
-
-### Rust Entrypoint & Database Init (`src-tauri/src/lib.rs`)
+## 2. macOS Native Menu & Window Setup in Rust (`src-tauri/src/lib.rs`)
 
 ```rust
 use sqlx::{sqlite::SqliteConnectOptions, SqlitePool};
 use std::str::FromStr;
-use tauri::Manager;
-
-#[derive(serde::Serialize, serde::Deserialize, sqlx::FromRow)]
-pub struct User {
-    pub id: i64,
-    pub name: String,
-    pub email: String,
-}
-
-#[tauri::command]
-async fn get_users(pool: tauri::State<'_, SqlitePool>) -> Result<Vec<User>, String> {
-    sqlx::query_as::<_, User>("SELECT id, name, email FROM users")
-        .fetch_all(&*pool)
-        .await
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn create_user(
-    name: String, 
-    email: String, 
-    pool: tauri::State<'_, SqlitePool>
-) -> Result<User, String> {
-    let id = sqlx::query("INSERT INTO users (name, email) VALUES (?, ?)")
-        .bind(&name)
-        .bind(&email)
-        .execute(&*pool)
-        .await
-        .map_err(|e| e.to_string())?
-        .last_insert_rowid();
-
-    Ok(User { id, name, email })
-}
+use tauri::{
+    menu::{Menu, MenuItem, Submenu},
+    Manager, TitleBarStyle,
+};
 
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
+            // 1. Configure macOS Native Application Menu Bar
+            #[cfg(target_os = "macos")]
+            {
+                let app_menu = Submenu::with_items(
+                    app,
+                    "Shutterbox",
+                    true,
+                    &[
+                        &MenuItem::with_id(app, "about", "About Shutterbox", true, None::<&str>)?,
+                        &MenuItem::with_id(app, "quit", "Quit Shutterbox", true, Some("cmd+q"))?,
+                    ],
+                )?;
+                let menu = Menu::with_items(app, &[&app_menu])?;
+                app.set_menu(menu)?;
+            }
+
+            // 2. Resolve OS-specific App Data Directory (macOS: ~/Library/Application Support/com.shutterbox.system/)
             let app_dir = app.path().app_data_dir().expect("failed to get app data dir");
             std::fs::create_dir_all(&app_dir).unwrap();
 
@@ -114,7 +80,7 @@ pub fn run() {
             tauri::async_runtime::block_on(async {
                 let pool = SqlitePool::connect_with(options).await.unwrap();
                 
-                // Run embedded schema migrations
+                // Embedded SQLite Schema Migrations
                 sqlx::query(
                     "CREATE TABLE IF NOT EXISTS users (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -131,7 +97,6 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_users, create_user])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -139,79 +104,92 @@ pub fn run() {
 
 ---
 
-## 4. Invoking Rust Commands from React (TypeScript)
+## 3. macOS Bundle & Window Configuration (`src-tauri/tauri.conf.json`)
 
-### Type Definition (`src/types/user.ts`)
-```typescript
-export interface User {
-    id: number;
-    name: string;
-    email: string;
+```json
+{
+  "$schema": "../gen/schemas/config.schema.json",
+  "productName": "Shutterbox System",
+  "version": "1.0.0",
+  "identifier": "com.shutterbox.system",
+  "app": {
+    "windows": [
+      {
+        "title": "Shutterbox System",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
+        "resizable": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "12.0",
+      "exceptionDomain": "",
+      "signingIdentity": null,
+      "entitlements": null,
+      "dmg": {
+        "background": null,
+        "windowSize": {
+          "width": 600,
+          "height": 400
+        },
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 420,
+          "y": 170
+        }
+      }
+    }
+  }
 }
-```
-
-### React Component (`src/components/UserList.tsx`)
-```tsx
-import React, { useEffect, useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { User } from '../types/user';
-
-export const UserList: React.FC = () => {
-    const [users, setUsers] = useState<User[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        loadUsers();
-    }, []);
-
-    const loadUsers = async () => {
-        try {
-            const data = await invoke<User[]>('get_users');
-            setUsers(data);
-        } catch (error) {
-            console.error('Failed to fetch users:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleCreateUser = async (name: string, email: string) => {
-        try {
-            const newUser = await invoke<User>('create_user', { name, email });
-            setUsers((prev) => [...prev, newUser]);
-        } catch (error) {
-            console.error('Failed to create user:', error);
-        }
-    };
-
-    if (loading) return <div>Loading database items...</div>;
-
-    return (
-        <div className="p-4">
-            <h1 className="text-xl font-bold mb-4">Users ({users.length})</h1>
-            <ul className="space-y-2">
-                {users.map((u) => (
-                    <li key={u.id} className="p-2 border rounded shadow-sm">
-                        {u.name} — <span className="text-gray-500">{u.email}</span>
-                    </li>
-                ))}
-            </ul>
-        </div>
-    );
-};
 ```
 
 ---
 
-## 5. Development & Build Commands
+## 4. Development & Build Commands (macOS & Windows)
 
+### Development Mode (with Hot Module Reload)
 ```bash
-# 1. Install NPM dependencies
-npm install
-
-# 2. Run Tauri app in development mode with HMR (Hot Module Replacement)
+# Works identically on macOS and Windows
 npm run tauri dev
+```
 
-# 3. Compile production release desktop installer (.exe / .msi / .dmg)
+### macOS Build Commands
+```bash
+# Build for current host architecture (Apple Silicon or Intel)
+npm run tauri build
+
+# Build Universal 2 Binary (Bundles Apple Silicon arm64 + Intel x86_64 into single .dmg)
+npm run tauri build -- --target universal-apple-darwin
+```
+
+### Windows Build Commands
+```powershell
+# Produces NSIS executable (.exe) and MSI installer (.msi)
 npm run tauri build
 ```
+
+---
+
+## 5. Output Desktop Packages
+
+- **macOS Output Directory**: `src-tauri/target/release/bundle/dmg/Shutterbox System_1.0.0_universal.dmg` (or `.app` in `bundle/macos/`).
+- **Windows Output Directory**: `src-tauri/target/release/bundle/nsis/Shutterbox System_1.0.0_x64-setup.exe`.

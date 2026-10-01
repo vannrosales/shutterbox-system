@@ -1,72 +1,66 @@
-# Desktop Security & Compliance Specification (Pure Tauri)
+# Desktop Security & Compliance Specification (macOS & Windows)
 
-> **Scope**: Native IPC Security, Capability Scoping, Database Security, Code Signing, and Compliance for Pure Tauri Desktop Applications.
-
----
-
-## 1. Zero Network Exposure & In-Memory IPC
-
-### 1. Elimination of Network Attack Vectors
-- Unlike web server or sidecar architectures, the **Pure Tauri Rust Backend** creates **zero TCP/UDP network sockets** and binds to **no local ports**.
-- Inter-Process Communication (IPC) operates entirely in-memory using native OS message passing between Webview2/WKWebView and the compiled Rust executable.
-
-### 2. IPC Command Security & Input Validation
-- Rust strong typing and `serde` deserialization automatically enforce strict payload validation. Invalid or malformed JSON payloads sent from webview context are rejected before reaching business logic handlers.
+> **Scope**: Security Architecture, Capabilities Model, macOS Apple Notarization, Windows Authenticode, and Data Protection for Pure Tauri Applications.
 
 ---
 
-## 2. Tauri 2.0 Capabilities & Permission Scoping
+## 1. Network & Operating System Isolation
 
-Tauri 2.0 gates native OS capabilities behind explicit granular JSON permission files located in `src-tauri/capabilities/default.json`:
+### 1. In-Memory IPC Bridge
+- The application creates **zero open TCP/UDP ports**.
+- All frontend-to-backend communication executes via native OS IPC bindings in memory (WKWebView message handlers on macOS and Edge IPC on Windows).
 
-```json
-{
-  "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "default",
-  "description": "Default capability set for desktop app",
-  "windows": ["main"],
-  "permissions": [
-    "core:default",
-    "dialog:allow-open",
-    "dialog:allow-save",
-    "notification:allow-notify"
-  ]
-}
+### 2. Operating System Sandboxing & File Permissions
+- **macOS Sandboxing**: Application data (SQLite database, app preferences, logs) is strictly confined to `~/Library/Application Support/com.shutterbox.system/`.
+- **Windows File ACLs**: Database is restricted to user profile `%APPDATA%\com.shutterbox.system\`.
+
+---
+
+## 2. macOS Apple Code Signing & Notarization Pipeline
+
+### Requirements for macOS Distribution
+To prevent macOS Gatekeeper warnings (*"App cannot be opened because it is from an unidentified developer"*), all production macOS desktop builds (`.app` / `.dmg`) must be signed and notarized by Apple.
+
+### Prerequisites
+1. **Apple Developer Account**: Enrolled in the Apple Developer Program.
+2. **Certificates**:
+   - `Developer ID Application` certificate installed in macOS Keychain.
+3. **App-Specific Password**: Generated at [appleid.apple.com](https://appleid.apple.com).
+
+### Automated Build & Notarization Pipeline (`CI / CD`)
+
+```bash
+# Set environment variables for macOS signing and notarization
+export APPLE_SIGNING_IDENTITY="Developer ID Application: Your Company Name (TEAMID123)"
+export APPLE_ID="developer@company.com"
+export APPLE_PASSWORD="xxxx-xxxx-xxxx-xxxx" # App-Specific Password
+export APPLE_TEAM_ID="TEAMID123"
+
+# Run Tauri build with automatic Apple notarization
+npm run tauri build -- --target universal-apple-darwin
+```
+
+### Manual Verification of macOS Package
+```bash
+# 1. Verify Code Signature
+codesign --verify --deep --strict --verbose=2 "src-tauri/target/release/bundle/macos/Shutterbox System.app"
+
+# 2. Verify Gatekeeper Acceptance
+spctl --assess --type execute --verbose=4 "src-tauri/target/release/bundle/macos/Shutterbox System.app"
 ```
 
 ---
 
-## 3. Database Security & Parameterized Queries
+## 3. Windows Code Signing (Authenticode / SignTool)
 
-### 1. SQL Injection Prevention
-- All database queries executed via `sqlx` MUST use parameterized variable binding (`query("... WHERE id = ?").bind(id)`).
-- Raw SQL string concatenation is strictly prohibited in code reviews and static analysis checks.
-
-### 2. At-Rest File Security
-- Database file `database.sqlite` is written to user application data directories (`%APPDATA%` on Windows, `~/Library/Application Support` on macOS) inheriting OS user-level ACLs.
-- For high-security compliance requirements (e.g., HIPAA / GDPR PII), enable **SQLCipher** in `sqlx` for AES-256 database encryption at rest.
+### Signing Command
+```powershell
+signtool sign /f "CompanyCert.pfx" /p "CertPassword" /tr http://timestamp.digicert.com /td sha256 "src-tauri/target/release/bundle/nsis/*.exe"
+```
 
 ---
 
-## 4. Code Signing & Distribution Compliance
+## 4. Data Security & Encryption at Rest
 
-### 1. Windows Code Signing (Authenticode / SignTool)
-- **Purpose**: Eliminates Windows Defender SmartScreen untrusted binary prompts during installation.
-- **Signing Command**:
-  ```powershell
-  signtool sign /f "CompanyCert.pfx" /p "CertPassword" /tr http://timestamp.digicert.com /td sha256 "src-tauri/target/release/bundle/nsis/*.exe"
-  ```
-
-### 2. macOS Code Signing & Apple Notarization
-- **Purpose**: Passes macOS Gatekeeper checks ("App is signed by Apple-approved developer").
-- **Requirements**:
-  - `Developer ID Application` Certificate in Keychain.
-  - Apple App-Specific Password for `xcrun notarytool`.
-- **Automated Tauri Build Command**:
-  ```bash
-  APPLE_SIGNING_IDENTITY="Developer ID Application: Your Company (TEAMID)" \
-  APPLE_ID="developer@company.com" \
-  APPLE_PASSWORD="app-specific-password" \
-  APPLE_TEAM_ID="TEAMID" \
-  npm run tauri build
-  ```
+1. **SQL Injection Protection**: All SQLite database operations in Rust use parameterized queries via `sqlx` (`sqlx::query("... WHERE id = ?").bind(id)`).
+2. **At-Rest Encryption**: Standard SQLite database can be upgraded to **SQLCipher** for AES-256 transparent database file encryption if processing sensitive PII.

@@ -4,6 +4,7 @@
 > **Backend**: Rust 2021 + SQLx (SQLite)  
 > **Frontend**: React 19 + TypeScript + Tailwind CSS v4  
 > **Target Platforms**: Windows 10/11 & macOS (Intel / Apple Silicon)  
+> **Master Domain Specification**: See [SHUTTERBOX_DOMAIN_LOGIC.md](file:///f:/React%20+%20Laravel%20Projects/shutterbox-system/docs/SHUTTERBOX_DOMAIN_LOGIC.md) for full database schemas, formulas, and business rules.
 
 ---
 
